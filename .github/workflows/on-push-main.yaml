@@ -42,7 +42,7 @@ jobs:
     uses: unbounded-tech/workflows-crossplane/.github/workflows/e2e.yaml@feat/github-e2e
     with:
       github: true
-      gh-app-id: ${{ secrets.GH_APP_ID }}
+      gh-app-id: "2650923"
     secrets:
       GH_APP_KEY: ${{ secrets.GH_APP_KEY }}
 
