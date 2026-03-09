@@ -27,7 +27,7 @@ _argocdReady = [
         ]
     }
     {
-        apiVersion = "repo.m.github.upbound.io/v1alpha1"
+        apiVersion = "repo.github.m.upbound.io/v1alpha1"
         kind = "Repository"
         metadata = {
             name = "placeholder-repo"
@@ -68,7 +68,7 @@ _items = [
                     metadata.name = "argocd"
                 }
                 {
-                    apiVersion = "repo.m.github.upbound.io/v1alpha1"
+                    apiVersion = "repo.github.m.upbound.io/v1alpha1"
                     kind = "Repository"
                     metadata.name = "test-gitops-gitops-repo"
                 }
@@ -109,7 +109,7 @@ _items = [
                     }
                 }
                 {
-                    apiVersion = "repo.m.github.upbound.io/v1alpha1"
+                    apiVersion = "repo.github.m.upbound.io/v1alpha1"
                     kind = "Repository"
                     metadata = {
                         name = "labeled-gitops-gitops-repo"
@@ -219,7 +219,7 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "repo.m.github.upbound.io/v1alpha1"
+                    apiVersion = "repo.github.m.upbound.io/v1alpha1"
                     kind = "Repository"
                     metadata.name = "tmpl-test-gitops-repo"
                     spec.forProvider = {
@@ -259,7 +259,7 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "repo.m.github.upbound.io/v1alpha1"
+                    apiVersion = "repo.github.m.upbound.io/v1alpha1"
                     kind = "Repository"
                     metadata.name = "init-test-gitops-repo"
                     spec.forProvider = {
@@ -420,7 +420,7 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "repo.m.github.upbound.io/v1alpha1"
+                    apiVersion = "repo.github.m.upbound.io/v1alpha1"
                     kind = "Repository"
                     metadata.name = "pc-test-gitops-repo"
                     spec.providerConfigRef = {
@@ -466,7 +466,7 @@ _items = [
             }
             assertResources = [
                 {
-                    apiVersion = "repo.m.github.upbound.io/v1alpha1"
+                    apiVersion = "repo.github.m.upbound.io/v1alpha1"
                     kind = "Repository"
                     metadata.name = "custom-repo-gitops-repo"
                     spec.forProvider = {

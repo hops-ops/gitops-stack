@@ -1,4 +1,4 @@
-apiVersion: repo.m.github.upbound.io/v1alpha1
+apiVersion: repo.github.m.upbound.io/v1alpha1
 kind: Repository
 metadata:
   name: gitops-gitops-repo
