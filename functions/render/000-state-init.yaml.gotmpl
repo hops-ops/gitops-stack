@@ -1,0 +1,109 @@
+# code: language=yaml
+#
+# Initialize $state with spec defaults
+#
+
+{{- $xr := getCompositeResource . }}
+{{- $spec := $xr.spec | default dict }}
+{{- $metadata := $xr.metadata | default dict }}
+
+# ==============================================================================
+# Core defaults
+# ==============================================================================
+{{- $name := $metadata.name | default "gitops" }}
+{{- $clusterName := $spec.clusterName | default $name }}
+{{- $namespace := $spec.namespace | default "argocd" }}
+{{- $managementPolicies := $spec.managementPolicies | default (list "*") }}
+
+# Labels
+{{- $defaultLabels := dict
+  "hops.ops.com.ai/managed" "true"
+  "hops.ops.com.ai/gitops" $name
+}}
+{{- $labels := merge $defaultLabels ($spec.labels | default dict) }}
+
+# Helm provider config (defaults to clusterName)
+{{- $helmProviderConfigRef := $spec.helmProviderConfigRef | default dict }}
+{{- $helmProviderConfigRef = dict
+  "name" ($helmProviderConfigRef.name | default $clusterName)
+  "kind" ($helmProviderConfigRef.kind | default "ProviderConfig")
+}}
+
+# Kubernetes provider config (defaults to clusterName)
+{{- $k8sProviderConfigRef := $spec.kubernetesProviderConfigRef | default dict }}
+{{- $k8sProviderConfigRef = dict
+  "name" ($k8sProviderConfigRef.name | default $clusterName)
+  "kind" ($k8sProviderConfigRef.kind | default "ProviderConfig")
+}}
+
+# GitHub provider config (defaults to "default")
+{{- $ghProviderConfigRef := $spec.githubProviderConfigRef | default dict }}
+{{- $ghProviderConfigRef = dict
+  "name" ($ghProviderConfigRef.name | default "default")
+  "kind" ($ghProviderConfigRef.kind | default "ProviderConfig")
+}}
+
+# ==============================================================================
+# ArgoCD configuration
+# ==============================================================================
+{{- $argocdSpec := $spec.argocd | default dict }}
+
+# ==============================================================================
+# Repository configuration
+# ==============================================================================
+{{- $repoSpec := $spec.repository | default dict }}
+{{- $repoOrg := $repoSpec.org }}
+{{- $repoName := $repoSpec.name | default (printf "%s-gitops" $clusterName) }}
+{{- $repoUrl := printf "https://github.com/%s/%s.git" $repoOrg $repoName }}
+
+# Template config (optional)
+{{- $repoTemplate := $repoSpec.template | default dict }}
+
+# ==============================================================================
+# Applications configuration
+# ==============================================================================
+{{- $appsSpec := $spec.applications | default dict }}
+{{- $projectsSpec := $appsSpec.projects | default dict }}
+{{- $crossplaneSpec := $appsSpec.crossplane | default dict }}
+
+# ==============================================================================
+# Initialize $state
+# ==============================================================================
+{{- $state := dict
+  "name" $name
+  "clusterName" $clusterName
+  "namespace" $namespace
+  "managementPolicies" $managementPolicies
+  "labels" $labels
+  "helmProviderConfigRef" $helmProviderConfigRef
+  "kubernetesProviderConfigRef" $k8sProviderConfigRef
+  "githubProviderConfigRef" $ghProviderConfigRef
+  "argocd" (dict
+    "name" ($argocdSpec.name | default "argocd")
+    "namespace" ($argocdSpec.namespace | default $namespace)
+    "values" ($argocdSpec.values | default dict)
+    "overrideAllValues" ($argocdSpec.overrideAllValues | default dict)
+  )
+  "repository" (dict
+    "org" $repoOrg
+    "name" $repoName
+    "description" ($repoSpec.description | default (printf "GitOps repository for %s cluster" $clusterName))
+    "visibility" ($repoSpec.visibility | default "private")
+    "template" $repoTemplate
+    "autoInit" ($repoSpec.autoInit | default true)
+    "topics" ($repoSpec.topics | default list)
+    "deleteBranchOnMerge" ($repoSpec.deleteBranchOnMerge | default true)
+    "url" $repoUrl
+  )
+  "applications" (dict
+    "projects" (dict
+      "enabled" ($projectsSpec.enabled | default true)
+      "path" ($projectsSpec.path | default ".gitops/deploy")
+    )
+    "crossplane" (dict
+      "enabled" ($crossplaneSpec.enabled | default false)
+    )
+  )
+  "observed" (dict)
+  "status" (dict)
+}}

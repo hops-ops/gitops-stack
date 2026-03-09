@@ -1,0 +1,12 @@
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: gitops-argocd-projects-app
+  annotations:
+    crossplane.io/composition-resource-name: argocd-projects-app
+status:
+  conditions:
+  - type: Ready
+    status: "True"
+  - type: Synced
+    status: "True"

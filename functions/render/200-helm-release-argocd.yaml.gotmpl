@@ -1,0 +1,48 @@
+# code: language=yaml
+#
+# Helm Release: ArgoCD
+#
+# Chart defaults:
+# - CRDs installed
+# - Prometheus metrics and ServiceMonitor enabled
+#
+
+{{- $argo := $state.argocd }}
+
+---
+apiVersion: helm.m.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: {{ $argo.name }}
+  annotations:
+    {{ setResourceNameAnnotation "helm-release-argocd" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    chart:
+      name: argo-cd
+      repository: https://argoproj.github.io/argo-helm
+      version: 9.4.3
+    namespace: {{ $argo.namespace }}
+    {{- if $argo.overrideAllValues }}
+    values:
+      {{- toYaml $argo.overrideAllValues | nindent 6 }}
+    {{- else }}
+    {{- $chartDefaults := dict
+      "crds" (dict "install" true)
+      "global" (dict
+        "monitoring" (dict
+          "enabled" true
+          "serviceMonitor" (dict "enabled" true)
+        )
+      )
+    }}
+    {{- $mergedValues := mergeOverwrite $chartDefaults ($argo.values | default dict) }}
+    values:
+      {{- toYaml $mergedValues | nindent 6 }}
+    {{- end }}
+  rollbackLimit: 3
+  providerConfigRef:
+    name: {{ $state.helmProviderConfigRef.name }}
+    kind: {{ $state.helmProviderConfigRef.kind }}

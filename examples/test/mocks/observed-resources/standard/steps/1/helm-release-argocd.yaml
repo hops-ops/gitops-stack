@@ -1,0 +1,15 @@
+apiVersion: helm.m.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: argocd
+  annotations:
+    crossplane.io/composition-resource-name: helm-release-argocd
+status:
+  conditions:
+  - type: Ready
+    status: "True"
+  - type: Synced
+    status: "True"
+  atProvider:
+    state: deployed
+    revision: "1"

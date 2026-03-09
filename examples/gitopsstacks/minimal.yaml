@@ -1,0 +1,9 @@
+apiVersion: hops.ops.com.ai/v1alpha1
+kind: GitopsStack
+metadata:
+  name: gitops
+  namespace: example-env
+spec:
+  clusterName: example-cluster
+  repository:
+    org: hops-ops

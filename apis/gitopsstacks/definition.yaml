@@ -1,0 +1,181 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: gitopsstacks.hops.ops.com.ai
+spec:
+  group: hops.ops.com.ai
+  names:
+    kind: GitopsStack
+    plural: gitopsstacks
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    referenceable: true
+    served: true
+    schema:
+      openAPIV3Schema:
+        description: GitopsStack installs ArgoCD, creates a GitHub repository, and wires them together for GitOps workflows.
+        type: object
+        properties:
+          spec:
+            description: GitopsStackSpec defines the desired state.
+            type: object
+            properties:
+              clusterName:
+                description: Name of the target cluster. Used as default for provider config names and resource naming.
+                type: string
+              managementPolicies:
+                description: Management policies for all composed resources. Defaults to ["*"].
+                type: array
+                items:
+                  type: string
+                default:
+                - "*"
+              labels:
+                description: Custom labels applied to all managed resources.
+                type: object
+                additionalProperties:
+                  type: string
+                x-kubernetes-preserve-unknown-fields: true
+              helmProviderConfigRef:
+                description: Reference to the Helm ProviderConfig. Defaults to clusterName.
+                type: object
+                properties:
+                  name:
+                    description: Name of the Helm ProviderConfig.
+                    type: string
+                  kind:
+                    description: Kind of the ProviderConfig. Defaults to ProviderConfig.
+                    type: string
+                    enum:
+                    - ProviderConfig
+                    - ClusterProviderConfig
+              kubernetesProviderConfigRef:
+                description: Reference to the Kubernetes ProviderConfig for creating Object resources. Defaults to clusterName.
+                type: object
+                properties:
+                  name:
+                    description: Name of the Kubernetes ProviderConfig.
+                    type: string
+                  kind:
+                    description: Kind of the ProviderConfig. Defaults to ProviderConfig.
+                    type: string
+                    enum:
+                    - ProviderConfig
+                    - ClusterProviderConfig
+              githubProviderConfigRef:
+                description: Reference to the GitHub ProviderConfig. Defaults to "default".
+                type: object
+                properties:
+                  name:
+                    description: Name of the GitHub ProviderConfig.
+                    type: string
+                  kind:
+                    description: Kind of the ProviderConfig. Defaults to ProviderConfig.
+                    type: string
+                    enum:
+                    - ProviderConfig
+                    - ClusterProviderConfig
+              namespace:
+                description: Namespace for ArgoCD. Defaults to argocd.
+                type: string
+              argocd:
+                description: Configuration for the ArgoCD Helm release.
+                type: object
+                properties:
+                  name:
+                    description: Helm release name. Defaults to argocd.
+                    type: string
+                  namespace:
+                    description: Namespace override for ArgoCD.
+                    type: string
+                  values:
+                    description: Helm values merged with chart defaults.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  overrideAllValues:
+                    description: Helm values that replace all defaults.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+              repository:
+                description: Configuration for the GitOps GitHub repository.
+                type: object
+                properties:
+                  org:
+                    description: GitHub organization that owns the repository.
+                    type: string
+                  name:
+                    description: Repository name. Defaults to {clusterName}-gitops.
+                    type: string
+                  description:
+                    description: Repository description.
+                    type: string
+                  visibility:
+                    description: Repository visibility. Defaults to private.
+                    type: string
+                    enum:
+                    - public
+                    - private
+                    - internal
+                  template:
+                    description: Template repository to use for initialization.
+                    type: object
+                    properties:
+                      owner:
+                        description: Owner of the template repository.
+                        type: string
+                      repository:
+                        description: Name of the template repository.
+                        type: string
+                  autoInit:
+                    description: Create an initial commit with an empty README. Defaults to true. Ignored when template is set.
+                    type: boolean
+                  topics:
+                    description: Topics for the repository.
+                    type: array
+                    items:
+                      type: string
+                  deleteBranchOnMerge:
+                    description: Automatically delete head branches on merge. Defaults to true.
+                    type: boolean
+                required:
+                - org
+              applications:
+                description: ArgoCD Application configuration.
+                type: object
+                properties:
+                  projects:
+                    description: Root ArgoCD Application that syncs projects from the gitops repo.
+                    type: object
+                    properties:
+                      enabled:
+                        description: Enable the projects Application. Defaults to true.
+                        type: boolean
+                      path:
+                        description: Path in the gitops repo to sync. Defaults to .gitops/deploy.
+                        type: string
+                  crossplane:
+                    description: Crossplane-specific ArgoCD projects and applications.
+                    type: object
+                    properties:
+                      enabled:
+                        description: Enable Crossplane integration apps.
+                        type: boolean
+            required:
+            - clusterName
+          status:
+            description: GitopsStackStatus defines the observed state.
+            type: object
+            properties:
+              ready:
+                description: Overall readiness of the GitOps stack.
+                type: boolean
+              repository:
+                description: GitOps repository information.
+                type: object
+                properties:
+                  url:
+                    description: Full URL of the gitops repository.
+                    type: string
+        required:
+        - spec

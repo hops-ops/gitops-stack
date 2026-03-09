@@ -1,0 +1,33 @@
+apiVersion: meta.dev.upbound.io/v2alpha1
+kind: Project
+metadata:
+  name: gitops-stack
+spec:
+  dependsOn:
+  - apiVersion: pkg.crossplane.io/v1
+    kind: Function
+    package: xpkg.crossplane.io/crossplane-contrib/function-auto-ready
+    version: '>=v0.6.1'
+  - apiVersion: pkg.crossplane.io/v1
+    kind: Provider
+    package: xpkg.crossplane.io/crossplane-contrib/provider-helm
+    version: '>=v1'
+  - apiVersion: pkg.crossplane.io/v1
+    kind: Provider
+    package: xpkg.crossplane.io/crossplane-contrib/provider-kubernetes
+    version: '>=v1'
+  - apiVersion: pkg.crossplane.io/v1
+    kind: Provider
+    package: xpkg.crossplane.io/crossplane-contrib/provider-upjet-github
+    version: '>=v0.19.0'
+  description: GitOps stack deploying ArgoCD via Helm, creating a GitHub repository,
+    and wiring ArgoCD to sync from it.
+  license: Apache-2.0
+  maintainer: Patrick Lee Scott <pat@patscott.io>
+  readme: |
+    # gitops-stack
+
+    Deploys a complete GitOps stack with ArgoCD, a GitHub repository, and
+    ArgoCD Applications wired to the repository for continuous delivery.
+  repository: ghcr.io/hops-ops/gitops-stack
+  source: github.com/hops-ops/gitops-stack

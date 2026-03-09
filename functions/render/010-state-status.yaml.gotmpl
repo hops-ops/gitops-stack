@@ -1,0 +1,62 @@
+# code: language=yaml
+#
+# Extract observed state from all composed resources and compute status
+#
+
+{{- $observed := $.observed.resources | default dict }}
+
+# ==============================================================================
+# Check readiness of each composed resource
+# ==============================================================================
+
+{{- $checkReady := dict }}
+{{- range $key := list "helm-release-argocd" "github-repository" "argocd-projects-app" "crossplane-app-project" "crossplane-configs-app" "crossplane-provider-configs-app" }}
+  {{- $entry := get $observed $key | default dict }}
+  {{- $resource := $entry.resource | default dict }}
+  {{- $status := $resource.status | default dict }}
+  {{- $ready := false }}
+  {{- range ($status.conditions | default list) }}
+    {{- if and (eq .type "Ready") (eq .status "True") }}
+      {{- $ready = true }}
+    {{- end }}
+  {{- end }}
+  {{- $checkReady = set $checkReady $key $ready }}
+{{- end }}
+
+# Extract repository URL from observed state
+{{- $repoEntry := get $observed "github-repository" | default dict }}
+{{- $repoResource := $repoEntry.resource | default dict }}
+{{- $repoStatus := $repoResource.status | default dict }}
+{{- $repoAtProvider := $repoStatus.atProvider | default dict }}
+{{- $repoFullName := $repoAtProvider.fullName | default "" }}
+{{- $observedRepoUrl := "" }}
+{{- if $repoFullName }}
+  {{- $observedRepoUrl = printf "https://github.com/%s" $repoFullName }}
+{{- end }}
+
+# ==============================================================================
+# Set observed state
+# ==============================================================================
+{{- $state = set $state "observed" (dict
+  "argocd" (dict "ready" (get $checkReady "helm-release-argocd"))
+  "repository" (dict
+    "ready" (get $checkReady "github-repository")
+    "url" $observedRepoUrl
+  )
+  "projectsApp" (dict "ready" (get $checkReady "argocd-projects-app"))
+  "crossplaneProject" (dict "ready" (get $checkReady "crossplane-app-project"))
+  "crossplaneConfigs" (dict "ready" (get $checkReady "crossplane-configs-app"))
+  "crossplaneProviderConfigs" (dict "ready" (get $checkReady "crossplane-provider-configs-app"))
+) }}
+
+# ==============================================================================
+# Compute status (readiness determined by function-auto-ready)
+# ==============================================================================
+{{- $repoUrl := $state.observed.repository.url | default $state.repository.url }}
+
+{{- $state = set $state "status" (dict
+  "ready" false
+  "repository" (dict
+    "url" $repoUrl
+  )
+) }}

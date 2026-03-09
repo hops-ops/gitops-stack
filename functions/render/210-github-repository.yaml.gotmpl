@@ -1,0 +1,38 @@
+# code: language=yaml
+#
+# GitHub Repository for GitOps
+#
+
+{{- $repo := $state.repository }}
+
+---
+apiVersion: repo.m.github.upbound.io/v1alpha1
+kind: Repository
+metadata:
+  name: {{ $state.name }}-gitops-repo
+  annotations:
+    {{ setResourceNameAnnotation "github-repository" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    name: {{ $repo.name }}
+    description: {{ $repo.description }}
+    visibility: {{ $repo.visibility }}
+    hasIssues: true
+    deleteBranchOnMerge: {{ $repo.deleteBranchOnMerge }}
+    {{- if $repo.template.repository }}
+    template:
+    - owner: {{ $repo.template.owner }}
+      repository: {{ $repo.template.repository }}
+      includeAllBranches: false
+    {{- else }}
+    autoInit: {{ $repo.autoInit }}
+    {{- end }}
+    {{- if $repo.topics }}
+    topics:
+      {{- toYaml $repo.topics | nindent 6 }}
+    {{- end }}
+  providerConfigRef:
+    name: {{ $state.githubProviderConfigRef.name }}
+    kind: {{ $state.githubProviderConfigRef.kind }}

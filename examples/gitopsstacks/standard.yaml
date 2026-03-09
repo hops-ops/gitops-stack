@@ -1,0 +1,31 @@
+apiVersion: hops.ops.com.ai/v1alpha1
+kind: GitopsStack
+metadata:
+  name: gitops
+  namespace: example-env
+spec:
+  clusterName: example-cluster
+  labels:
+    team: platform
+  repository:
+    org: hops-ops
+    name: example-cluster-gitops
+    description: GitOps repository for example-cluster
+    visibility: private
+    topics:
+    - gitops
+    - argocd
+    template:
+      owner: hops-ops
+      repository: platform-gitops-template
+  argocd:
+    values:
+      server:
+        ingress:
+          enabled: false
+  applications:
+    projects:
+      enabled: true
+      path: .gitops/deploy
+    crossplane:
+      enabled: true

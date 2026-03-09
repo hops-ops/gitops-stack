@@ -1,0 +1,59 @@
+name: on-push-main
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/on-push-main.yaml"
+      - ".github/workflows/on-version-tagged.yaml"
+      - ".gitops/**"
+      - "apis/**"
+      - "examples/**"
+      - "functions/**"
+      - "tests/**"
+      - "upbound.yaml"
+
+permissions:
+  packages: write
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  validate:
+    uses: unbounded-tech/workflows-crossplane/.github/workflows/validate.yaml@v2.17.0
+    with:
+      examples: |
+        [
+          { "example": "examples/gitopsstacks/minimal.yaml" },
+          { "example": "examples/gitopsstacks/standard.yaml" },
+          { "example": "examples/gitopsstacks/standard.yaml", "observed_resources": "examples/test/mocks/observed-resources/standard/steps/1/" },
+          { "example": "examples/gitopsstacks/standard.yaml", "observed_resources": "examples/test/mocks/observed-resources/standard/steps/2/" }
+        ]
+      api_path: apis/gitopsstacks
+      error_on_missing_schemas: true
+
+  test:
+    uses: unbounded-tech/workflows-crossplane/.github/workflows/test.yaml@v2.17.0
+
+  e2e:
+    uses: unbounded-tech/workflows-crossplane/.github/workflows/e2e.yaml@feat/github-e2e
+    with:
+      github: true
+      gh-app-id: ${{ secrets.GH_APP_ID }}
+    secrets:
+      GH_APP_KEY: ${{ secrets.GH_APP_KEY }}
+
+  version-and-tag:
+    name: Version and Tag
+    needs:
+      - validate
+      - test
+      - e2e
+    uses: unbounded-tech/workflow-vnext-tag/.github/workflows/workflow.yaml@v1.21.0
+    secrets:
+      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+    with:
+      useDeployKey: true

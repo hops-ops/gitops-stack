@@ -1,0 +1,127 @@
+# code: language=yaml
+#
+# ArgoCD Crossplane integration: AppProject + Applications for configurations,
+# provider-configs, and self-managed resources.
+#
+# Gated on: crossplane.enabled AND argocd ready
+#
+
+{{- $obs := $state.observed }}
+{{- $apps := $state.applications }}
+{{- $repo := $state.repository }}
+
+{{- if and $apps.crossplane.enabled $obs.argocd.ready }}
+
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-crossplane-app-project
+  annotations:
+    {{ setResourceNameAnnotation "crossplane-app-project" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: argoproj.io/v1alpha1
+      kind: AppProject
+      metadata:
+        name: crossplane
+        namespace: {{ $state.argocd.namespace }}
+        annotations:
+          argocd.argoproj.io/sync-wave: "-1"
+        finalizers:
+        - resources-finalizer.argocd.argoproj.io
+      spec:
+        description: Crossplane resources
+        sourceRepos:
+        - '*'
+        destinations:
+        - namespace: '*'
+          server: https://kubernetes.default.svc
+        clusterResourceWhitelist:
+        - group: '*'
+          kind: '*'
+        namespaceResourceWhitelist:
+        - group: '*'
+          kind: '*'
+  providerConfigRef:
+    name: {{ $state.kubernetesProviderConfigRef.name }}
+    kind: {{ $state.kubernetesProviderConfigRef.kind }}
+
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-crossplane-configs-app
+  annotations:
+    {{ setResourceNameAnnotation "crossplane-configs-app" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: argoproj.io/v1alpha1
+      kind: Application
+      metadata:
+        name: crossplane-configurations
+        namespace: {{ $state.argocd.namespace }}
+        annotations:
+          argocd.argoproj.io/sync-wave: "0"
+      spec:
+        project: crossplane
+        source:
+          repoURL: {{ $repo.url }}
+          targetRevision: HEAD
+          path: resources/crossplane/configurations
+        destination:
+          server: https://kubernetes.default.svc
+          namespace: crossplane-system
+        syncPolicy:
+          automated:
+            selfHeal: true
+            prune: true
+            allowEmpty: true
+  providerConfigRef:
+    name: {{ $state.kubernetesProviderConfigRef.name }}
+    kind: {{ $state.kubernetesProviderConfigRef.kind }}
+
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-crossplane-provider-configs-app
+  annotations:
+    {{ setResourceNameAnnotation "crossplane-provider-configs-app" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: argoproj.io/v1alpha1
+      kind: Application
+      metadata:
+        name: crossplane-provider-configs
+        namespace: {{ $state.argocd.namespace }}
+        annotations:
+          argocd.argoproj.io/sync-wave: "1"
+      spec:
+        project: crossplane
+        source:
+          repoURL: {{ $repo.url }}
+          targetRevision: HEAD
+          path: resources/crossplane/provider-configs
+        destination:
+          server: https://kubernetes.default.svc
+          namespace: crossplane-system
+        syncPolicy:
+          automated:
+            selfHeal: true
+            prune: true
+            allowEmpty: true
+  providerConfigRef:
+    name: {{ $state.kubernetesProviderConfigRef.name }}
+    kind: {{ $state.kubernetesProviderConfigRef.kind }}
+
+{{- end }}
