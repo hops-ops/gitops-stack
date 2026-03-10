@@ -22,12 +22,11 @@ import models.io.upbound.dev.meta.v1alpha1 as metav1alpha1
 # Run: make e2e
 # Run without cleanup: up test run tests/e2etest-gitops --e2e --skip-control-plane-cleanup
 # ==============================================================================
-
 _github_creds = file.read("secrets/github-creds")
 _base64_github_creds = base64.encode(_github_creds)
 
 _now = str(int(math.floor(datetime.ticks())))
-_test_name = "e2e-gitops-" + _now
+_test_name = "e2e-gitops-stack" + _now
 
 _items = [
     metav1alpha1.E2ETest {
@@ -37,10 +36,11 @@ _items = [
                 autoUpgrade.channel = "Rapid"
             }
             defaultConditions = ["Ready"]
-            timeoutSeconds = 1800  # 30 minutes - Helm chart install + GitHub repo creation
-            cleanupTimeoutSeconds = 600  # 10 minutes
+            # 30 minutes - Helm chart install + GitHub repo creation
+            timeoutSeconds = 1800
+            # 10 minutes
+            cleanupTimeoutSeconds = 600
             skipDelete = False
-
             # ==============================================================
             # extraResources: RBAC, ProviderConfigs, GitHub credentials
             # These are NOT deleted during cleanup
@@ -126,7 +126,6 @@ _items = [
                     }
                 }
             ]
-
             # ==============================================================
             # manifests: GitopsStack XR
             # Deleted during cleanup (unless --skip-delete)
