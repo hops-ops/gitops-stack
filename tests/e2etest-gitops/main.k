@@ -158,7 +158,6 @@ _items = [
                             org = "hops-ops"
                             name = _test_name
                             description = "E2E test repo - safe to delete"
-                            topics = ["e2e-test", "ephemeral"]
                         }
                         argocd = {
                             values = {
