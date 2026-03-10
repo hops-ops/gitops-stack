@@ -43,6 +43,7 @@ jobs:
     with:
       github: true
       gh-app-id: "2650923"
+      gh-owner: ${{ github.repository_owner }}
     secrets:
       GH_APP_KEY: ${{ secrets.GH_APP_KEY }}
 
