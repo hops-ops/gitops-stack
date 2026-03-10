@@ -11,11 +11,14 @@ import models.io.upbound.dev.meta.v1alpha1 as metav1alpha1
 # Creates a real GitHub repository and installs ArgoCD via Helm.
 #
 # Credentials required:
-#   secrets/github-creds  - GitHub App installation token JSON
+#   secrets/github-creds  - provider-upjet-github credentials JSON.
+#                          Token form:
 #                          {"token":"ghs_...","owner":"hops-ops"}
+#                          App auth form:
+#                          {"owner":"hops-ops","app_auth":[{"id":"123456","installation_id":"78901234","pem_file":"-----BEGIN RSA PRIVATE KEY-----\n..."}]}
 #
-# The shared e2e workflow populates secrets/github-creds from a GitHub App token.
-# It must request the organization owner installation so repo creation against
+# The shared e2e workflow currently writes this file for the test. The GitHub
+# App installation must target the organization owner so repo creation against
 # POST /orgs/{org}/repos is allowed.
 #
 # Run: make e2e

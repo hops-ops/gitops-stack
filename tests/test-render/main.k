@@ -226,6 +226,8 @@ _items = [
                         name = "test-cluster-gitops"
                         visibility = "private"
                         hasIssues = True
+                    }
+                    spec.initProvider = {
                         deleteBranchOnMerge = True
                         template = [
                             {
@@ -264,10 +266,12 @@ _items = [
                     metadata.name = "init-test-gitops-repo"
                     spec.forProvider = {
                         name = "test-cluster-gitops"
-                        autoInit = True
                         visibility = "private"
                         hasIssues = True
+                    }
+                    spec.initProvider = {
                         deleteBranchOnMerge = True
+                        autoInit = True
                     }
                 }
             ]
@@ -475,6 +479,8 @@ _items = [
                         visibility = "public"
                         topics = ["gitops", "kubernetes"]
                         hasIssues = True
+                    }
+                    spec.initProvider = {
                         deleteBranchOnMerge = True
                         autoInit = True
                     }

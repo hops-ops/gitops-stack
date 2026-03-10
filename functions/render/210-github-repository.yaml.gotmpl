@@ -20,6 +20,13 @@ spec:
     description: {{ $repo.description }}
     visibility: {{ $repo.visibility }}
     hasIssues: true
+    {{- if $repo.topics }}
+    topics:
+      {{- toYaml $repo.topics | nindent 6 }}
+    {{- end }}
+  # Create-only repo settings belong in initProvider so provider-upjet-github
+  # does not keep driving follow-up updates for initialization fields.
+  initProvider:
     deleteBranchOnMerge: {{ $repo.deleteBranchOnMerge }}
     {{- if $repo.template.repository }}
     template:
@@ -28,10 +35,6 @@ spec:
       includeAllBranches: false
     {{- else }}
     autoInit: {{ $repo.autoInit }}
-    {{- end }}
-    {{- if $repo.topics }}
-    topics:
-      {{- toYaml $repo.topics | nindent 6 }}
     {{- end }}
   providerConfigRef:
     name: {{ $state.githubProviderConfigRef.name }}
