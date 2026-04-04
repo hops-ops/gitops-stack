@@ -161,7 +161,7 @@ spec:
                         description: JSON key for the GitHub App ID within the secret. Defaults to "appId".
                         type: string
                       installationIdKey:
-                        description: JSON key for the GitHub App Installation ID within the secret. Defaults to "installationId".
+                        description: JSON key for the GitHub App Installation ID within the secret. Optional — ArgoCD auto-discovers from the org when omitted.
                         type: string
                       privateKeyKey:
                         description: JSON key for the GitHub App private key within the secret. Defaults to "privateKey".

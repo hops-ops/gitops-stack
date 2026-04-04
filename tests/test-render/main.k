@@ -601,13 +601,6 @@ _items = [
                                     }
                                 }
                                 {
-                                    secretKey = "githubAppInstallationID"
-                                    remoteRef = {
-                                        key = "github/argocd-creds"
-                                        property = "installationId"
-                                    }
-                                }
-                                {
                                     secretKey = "githubAppPrivateKey"
                                     remoteRef = {
                                         key = "github/argocd-creds"
