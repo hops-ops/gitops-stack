@@ -14,7 +14,11 @@ metadata:
     {{ setResourceNameAnnotation "github-repository" }}
   labels: {{ $state.labels | toJson }}
 spec:
+  {{- if $repo.allowDelete }}
   managementPolicies: {{ $state.managementPolicies | toJson }}
+  {{- else }}
+  managementPolicies: ["Observe", "Create", "Update", "LateInitialize"]
+  {{- end }}
   forProvider:
     name: {{ $repo.name }}
     description: {{ $repo.description }}

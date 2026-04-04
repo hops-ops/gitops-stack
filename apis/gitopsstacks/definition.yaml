@@ -138,6 +138,10 @@ spec:
                   deleteBranchOnMerge:
                     description: Automatically delete head branches on merge. Defaults to true.
                     type: boolean
+                  allowDelete:
+                    description: Allow Crossplane to delete the repository when the XR is deleted. Defaults to false for safety.
+                    type: boolean
+                    default: false
                 required:
                 - org
               externalSecrets:

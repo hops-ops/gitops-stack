@@ -99,6 +99,7 @@
     "autoInit" ($repoSpec.autoInit | default true)
     "topics" ($repoSpec.topics | default list)
     "deleteBranchOnMerge" ($repoSpec.deleteBranchOnMerge | default true)
+    "allowDelete" ($repoSpec.allowDelete | default false)
     "url" $repoUrl
   )
   "externalSecrets" (dict

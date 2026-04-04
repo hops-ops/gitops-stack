@@ -71,6 +71,8 @@ _items = [
                     apiVersion = "repo.github.m.upbound.io/v1alpha1"
                     kind = "Repository"
                     metadata.name = "test-cluster-gitops"
+                    # Repository excludes Delete from managementPolicies by default
+                    spec.managementPolicies = ["Observe", "Create", "Update", "LateInitialize"]
                 }
             ]
         }
