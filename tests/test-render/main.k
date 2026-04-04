@@ -70,7 +70,7 @@ _items = [
                 {
                     apiVersion = "repo.github.m.upbound.io/v1alpha1"
                     kind = "Repository"
-                    metadata.name = "test-gitops-gitops-repo"
+                    metadata.name = "test-cluster-gitops"
                 }
             ]
         }
@@ -112,7 +112,7 @@ _items = [
                     apiVersion = "repo.github.m.upbound.io/v1alpha1"
                     kind = "Repository"
                     metadata = {
-                        name = "labeled-gitops-gitops-repo"
+                        name = "test-cluster-gitops"
                         labels = {
                             "hops.ops.com.ai/managed" = "true"
                             "hops.ops.com.ai/gitops" = "labeled-gitops"
@@ -221,7 +221,7 @@ _items = [
                 {
                     apiVersion = "repo.github.m.upbound.io/v1alpha1"
                     kind = "Repository"
-                    metadata.name = "tmpl-test-gitops-repo"
+                    metadata.name = "test-cluster-gitops"
                     spec.forProvider = {
                         name = "test-cluster-gitops"
                         visibility = "private"
@@ -263,7 +263,7 @@ _items = [
                 {
                     apiVersion = "repo.github.m.upbound.io/v1alpha1"
                     kind = "Repository"
-                    metadata.name = "init-test-gitops-repo"
+                    metadata.name = "test-cluster-gitops"
                     spec.forProvider = {
                         name = "test-cluster-gitops"
                         visibility = "private"
@@ -426,7 +426,7 @@ _items = [
                 {
                     apiVersion = "repo.github.m.upbound.io/v1alpha1"
                     kind = "Repository"
-                    metadata.name = "pc-test-gitops-repo"
+                    metadata.name = "test-cluster-gitops"
                     spec.providerConfigRef = {
                         name = "default"
                         kind = "ProviderConfig"
@@ -472,7 +472,7 @@ _items = [
                 {
                     apiVersion = "repo.github.m.upbound.io/v1alpha1"
                     kind = "Repository"
-                    metadata.name = "custom-repo-gitops-repo"
+                    metadata.name = "my-custom-gitops"
                     spec.forProvider = {
                         name = "my-custom-gitops"
                         description = "My custom gitops repo"

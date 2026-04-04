@@ -9,7 +9,7 @@
 apiVersion: repo.github.m.upbound.io/v1alpha1
 kind: Repository
 metadata:
-  name: {{ $state.name }}-gitops-repo
+  name: {{ $repo.name }}
   annotations:
     {{ setResourceNameAnnotation "github-repository" }}
   labels: {{ $state.labels | toJson }}
