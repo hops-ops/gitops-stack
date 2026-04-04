@@ -306,7 +306,7 @@ _items = [
                         kind = "Application"
                         metadata.name = "projects"
                         spec.source = {
-                            path = ".gitops/deploy"
+                            path = "apps"
                             repoURL = "https://github.com/hops-ops/test-cluster-gitops.git"
                         }
                     }
@@ -514,6 +514,268 @@ _items = [
                     kind = "Object"
                     metadata.name = "path-test-argocd-projects-app"
                     spec.forProvider.manifest.spec.source.path = "deploy/argocd"
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 13: ESO disabled by default - no ExternalSecret rendered
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "eso-disabled-by-default"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = stacksv1alpha1.GitopsStack {
+                metadata.name = "no-eso"
+                spec = {
+                    clusterName = "test-cluster"
+                    repository.org = "hops-ops"
+                }
+            }
+            observedResources = _argocdReady
+            # Projects app should render (no ESO gating when disabled)
+            # but NO ExternalSecret Object should appear
+            assertResources = [
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "no-eso-argocd-projects-app"
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 14: ESO enabled renders ExternalSecret when ArgoCD ready
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "eso-enabled-renders-external-secret"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = stacksv1alpha1.GitopsStack {
+                metadata.name = "eso-test"
+                spec = {
+                    clusterName = "test-cluster"
+                    repository.org = "hops-ops"
+                    externalSecrets = {
+                        enabled = True
+                        githubApp.secretPath = "github/argocd-creds"
+                    }
+                }
+            }
+            observedResources = _argocdReady
+            assertResources = [
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "eso-test-argocd-repo-creds"
+                    spec.forProvider.manifest = {
+                        apiVersion = "external-secrets.io/v1"
+                        kind = "ExternalSecret"
+                        metadata = {
+                            name = "argocd-repo-creds-github"
+                            namespace = "argocd"
+                        }
+                        spec = {
+                            secretStoreRef = {
+                                name = "default"
+                                kind = "ClusterSecretStore"
+                            }
+                            target.name = "argocd-repo-creds-github"
+                            target.template.metadata.labels = {
+                                "argocd.argoproj.io/secret-type" = "repo-creds"
+                            }
+                            data = [
+                                {
+                                    secretKey = "githubAppID"
+                                    remoteRef = {
+                                        key = "github/argocd-creds"
+                                        property = "appId"
+                                    }
+                                }
+                                {
+                                    secretKey = "githubAppInstallationID"
+                                    remoteRef = {
+                                        key = "github/argocd-creds"
+                                        property = "installationId"
+                                    }
+                                }
+                                {
+                                    secretKey = "githubAppPrivateKey"
+                                    remoteRef = {
+                                        key = "github/argocd-creds"
+                                        property = "privateKey"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 15: ESO gates projects app on repo creds ready
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "eso-gates-projects-app-on-repo-creds"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = stacksv1alpha1.GitopsStack {
+                metadata.name = "eso-gate"
+                spec = {
+                    clusterName = "test-cluster"
+                    repository.org = "hops-ops"
+                    externalSecrets = {
+                        enabled = True
+                        githubApp.secretPath = "github/creds"
+                    }
+                }
+            }
+            # ArgoCD ready but repo creds NOT ready yet
+            observedResources = _argocdReady
+            # ExternalSecret should render, but projects app should NOT
+            # (because ESO is enabled and repo creds aren't ready)
+            assertResources = [
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "eso-gate-argocd-repo-creds"
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 16: ESO + repo creds ready unlocks projects app
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "eso-repo-creds-ready-unlocks-projects-app"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = stacksv1alpha1.GitopsStack {
+                metadata.name = "eso-unlock"
+                spec = {
+                    clusterName = "test-cluster"
+                    repository.org = "hops-ops"
+                    externalSecrets = {
+                        enabled = True
+                        githubApp.secretPath = "github/creds"
+                    }
+                }
+            }
+            observedResources = _argocdReady + [
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata = {
+                        name = "eso-unlock-argocd-repo-creds"
+                        annotations = {"crossplane.io/composition-resource-name" = "external-secret-argocd-repo-creds"}
+                    }
+                    status.conditions = [
+                        {type = "Ready", status = "True"}
+                        {type = "Synced", status = "True"}
+                    ]
+                }
+            ]
+            # Now projects app AND usage should render
+            assertResources = [
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "eso-unlock-argocd-projects-app"
+                }
+                {
+                    apiVersion = "protection.crossplane.io/v1beta1"
+                    kind = "Usage"
+                    metadata.name = "eso-unlock-delete-repo-creds-before-argocd"
+                }
+                {
+                    apiVersion = "protection.crossplane.io/v1beta1"
+                    kind = "Usage"
+                    metadata.name = "eso-unlock-delete-projects-app-before-argocd"
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 17: Custom ESO secret store and key names
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "eso-custom-secret-store-and-keys"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = stacksv1alpha1.GitopsStack {
+                metadata.name = "eso-custom"
+                spec = {
+                    clusterName = "test-cluster"
+                    repository.org = "my-org"
+                    externalSecrets = {
+                        enabled = True
+                        secretStoreName = "aws-secrets"
+                        githubApp = {
+                            secretPath = "prod/github/app"
+                            appIdKey = "app_id"
+                            installationIdKey = "install_id"
+                            privateKeyKey = "pem_key"
+                        }
+                    }
+                }
+            }
+            observedResources = _argocdReady
+            assertResources = [
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "eso-custom-argocd-repo-creds"
+                    spec.forProvider.manifest.spec = {
+                        secretStoreRef = {
+                            name = "aws-secrets"
+                            kind = "ClusterSecretStore"
+                        }
+                        target.template.data.url = "https://github.com/my-org"
+                        data = [
+                            {
+                                secretKey = "githubAppID"
+                                remoteRef = {
+                                    key = "prod/github/app"
+                                    property = "app_id"
+                                }
+                            }
+                            {
+                                secretKey = "githubAppInstallationID"
+                                remoteRef = {
+                                    key = "prod/github/app"
+                                    property = "install_id"
+                                }
+                            }
+                            {
+                                secretKey = "githubAppPrivateKey"
+                                remoteRef = {
+                                    key = "prod/github/app"
+                                    property = "pem_key"
+                                }
+                            }
+                        ]
+                    }
                 }
             ]
         }

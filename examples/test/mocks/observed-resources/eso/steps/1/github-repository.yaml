@@ -1,0 +1,15 @@
+apiVersion: repo.github.m.upbound.io/v1alpha1
+kind: Repository
+metadata:
+  name: gitops-gitops-repo
+  annotations:
+    crossplane.io/composition-resource-name: github-repository
+status:
+  conditions:
+  - type: Ready
+    status: "True"
+  - type: Synced
+    status: "True"
+  atProvider:
+    fullName: hops-ops/example-cluster-gitops
+    htmlUrl: https://github.com/hops-ops/example-cluster-gitops

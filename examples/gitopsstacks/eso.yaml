@@ -1,0 +1,26 @@
+apiVersion: hops.ops.com.ai/v1alpha1
+kind: GitopsStack
+metadata:
+  name: gitops
+  namespace: example-env
+spec:
+  clusterName: example-cluster
+  labels:
+    team: platform
+  repository:
+    org: hops-ops
+    name: example-cluster-gitops
+    description: GitOps repository for example-cluster
+    visibility: private
+  externalSecrets:
+    enabled: true
+    secretStoreName: default
+    githubApp:
+      secretPath: github/argocd-credentials
+      appIdKey: appId
+      installationIdKey: installationId
+      privateKeyKey: privateKey
+  applications:
+    projects:
+      enabled: true
+      path: .gitops/deploy

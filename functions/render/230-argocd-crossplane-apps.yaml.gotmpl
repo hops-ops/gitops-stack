@@ -10,7 +10,12 @@
 {{- $apps := $state.applications }}
 {{- $repo := $state.repository }}
 
-{{- if and $apps.crossplane.enabled $obs.argocd.ready }}
+{{- $repoCredsReady := true }}
+{{- if $state.externalSecrets.enabled }}
+  {{- $repoCredsReady = $obs.repoCreds.ready }}
+{{- end }}
+
+{{- if and $apps.crossplane.enabled $obs.argocd.ready $repoCredsReady }}
 
 ---
 apiVersion: kubernetes.m.crossplane.io/v1alpha1

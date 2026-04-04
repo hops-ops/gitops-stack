@@ -60,6 +60,12 @@
 {{- $repoTemplate := $repoSpec.template | default dict }}
 
 # ==============================================================================
+# External Secrets configuration
+# ==============================================================================
+{{- $esoSpec := $spec.externalSecrets | default dict }}
+{{- $ghAppSpec := $esoSpec.githubApp | default dict }}
+
+# ==============================================================================
 # Applications configuration
 # ==============================================================================
 {{- $appsSpec := $spec.applications | default dict }}
@@ -95,10 +101,20 @@
     "deleteBranchOnMerge" ($repoSpec.deleteBranchOnMerge | default true)
     "url" $repoUrl
   )
+  "externalSecrets" (dict
+    "enabled" ($esoSpec.enabled | default false)
+    "secretStoreName" ($esoSpec.secretStoreName | default "default")
+    "githubApp" (dict
+      "secretPath" ($ghAppSpec.secretPath | default "")
+      "appIdKey" ($ghAppSpec.appIdKey | default "appId")
+      "installationIdKey" ($ghAppSpec.installationIdKey | default "installationId")
+      "privateKeyKey" ($ghAppSpec.privateKeyKey | default "privateKey")
+    )
+  )
   "applications" (dict
     "projects" (dict
       "enabled" ($projectsSpec.enabled | default true)
-      "path" ($projectsSpec.path | default ".gitops/deploy")
+      "path" ($projectsSpec.path | default "apps")
     )
     "crossplane" (dict
       "enabled" ($crossplaneSpec.enabled | default false)

@@ -140,6 +140,34 @@ spec:
                     type: boolean
                 required:
                 - org
+              externalSecrets:
+                description: External Secrets Operator integration for ArgoCD repository credentials. Requires SecretStack as a prerequisite.
+                type: object
+                properties:
+                  enabled:
+                    description: Enable ESO integration. Creates an ExternalSecret to pull GitHub App credentials from AWS Secrets Manager into ArgoCD repo-creds.
+                    type: boolean
+                  secretStoreName:
+                    description: Name of the ClusterSecretStore created by SecretStack. Defaults to "default".
+                    type: string
+                  githubApp:
+                    description: GitHub App credential references in AWS Secrets Manager.
+                    type: object
+                    properties:
+                      secretPath:
+                        description: AWS Secrets Manager secret name containing GitHub App credentials.
+                        type: string
+                      appIdKey:
+                        description: JSON key for the GitHub App ID within the secret. Defaults to "appId".
+                        type: string
+                      installationIdKey:
+                        description: JSON key for the GitHub App Installation ID within the secret. Defaults to "installationId".
+                        type: string
+                      privateKeyKey:
+                        description: JSON key for the GitHub App private key within the secret. Defaults to "privateKey".
+                        type: string
+                    required:
+                    - secretPath
               applications:
                 description: ArgoCD Application configuration.
                 type: object
@@ -152,7 +180,7 @@ spec:
                         description: Enable the projects Application. Defaults to true.
                         type: boolean
                       path:
-                        description: Path in the gitops repo to sync. Defaults to .gitops/deploy.
+                        description: Path in the gitops repo to sync. Defaults to apps.
                         type: string
                   crossplane:
                     description: Crossplane-specific ArgoCD projects and applications.
