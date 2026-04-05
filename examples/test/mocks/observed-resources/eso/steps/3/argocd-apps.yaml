@@ -1,9 +1,9 @@
 apiVersion: kubernetes.m.crossplane.io/v1alpha1
 kind: Object
 metadata:
-  name: gitops-argocd-projects-app
+  name: gitops-argocd-apps
   annotations:
-    crossplane.io/composition-resource-name: argocd-projects-app
+    crossplane.io/composition-resource-name: argocd-apps
 status:
   conditions:
   - type: Ready

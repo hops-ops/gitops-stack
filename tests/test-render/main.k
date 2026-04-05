@@ -302,7 +302,7 @@ _items = [
                 {
                     apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
                     kind = "Object"
-                    metadata.name = "gate-test-argocd-projects-app"
+                    metadata.name = "gate-test-argocd-apps"
                     spec.forProvider.manifest = {
                         apiVersion = "argoproj.io/v1alpha1"
                         kind = "Application"
@@ -316,7 +316,7 @@ _items = [
                 {
                     apiVersion = "protection.crossplane.io/v1beta1"
                     kind = "Usage"
-                    metadata.name = "gate-test-delete-projects-app-before-argocd"
+                    metadata.name = "gate-test-delete-apps-before-argocd"
                 }
             ]
         }
@@ -345,7 +345,7 @@ _items = [
                 {
                     apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
                     kind = "Object"
-                    metadata.name = "no-xp-argocd-projects-app"
+                    metadata.name = "no-xp-argocd-apps"
                 }
             ]
         }
@@ -374,33 +374,13 @@ _items = [
                 {
                     apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
                     kind = "Object"
-                    metadata.name = "xp-test-crossplane-app-project"
+                    metadata.name = "xp-test-crossplane-app"
                     spec.forProvider.manifest = {
                         apiVersion = "argoproj.io/v1alpha1"
-                        kind = "AppProject"
+                        kind = "Application"
                         metadata.name = "crossplane"
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "xp-test-crossplane-configs-app"
-                    spec.forProvider.manifest = {
-                        apiVersion = "argoproj.io/v1alpha1"
-                        kind = "Application"
-                        metadata.name = "crossplane-configurations"
-                        spec.source.path = "resources/crossplane/configurations"
-                    }
-                }
-                {
-                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
-                    kind = "Object"
-                    metadata.name = "xp-test-crossplane-provider-configs-app"
-                    spec.forProvider.manifest = {
-                        apiVersion = "argoproj.io/v1alpha1"
-                        kind = "Application"
-                        metadata.name = "crossplane-provider-configs"
-                        spec.source.path = "resources/crossplane/provider-configs"
+                        spec.project = "default"
+                        spec.source.path = "crossplane"
                     }
                 }
             ]
@@ -514,7 +494,7 @@ _items = [
                 {
                     apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
                     kind = "Object"
-                    metadata.name = "path-test-argocd-projects-app"
+                    metadata.name = "path-test-argocd-apps"
                     spec.forProvider.manifest.spec.source.path = "deploy/argocd"
                 }
             ]
@@ -545,7 +525,7 @@ _items = [
                 {
                     apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
                     kind = "Object"
-                    metadata.name = "no-eso-argocd-projects-app"
+                    metadata.name = "no-eso-argocd-apps"
                 }
             ]
         }
@@ -692,7 +672,7 @@ _items = [
                 {
                     apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
                     kind = "Object"
-                    metadata.name = "eso-unlock-argocd-projects-app"
+                    metadata.name = "eso-unlock-argocd-apps"
                 }
                 {
                     apiVersion = "protection.crossplane.io/v1beta1"
@@ -702,7 +682,7 @@ _items = [
                 {
                     apiVersion = "protection.crossplane.io/v1beta1"
                     kind = "Usage"
-                    metadata.name = "eso-unlock-delete-projects-app-before-argocd"
+                    metadata.name = "eso-unlock-delete-apps-before-argocd"
                 }
             ]
         }

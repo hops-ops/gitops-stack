@@ -10,7 +10,7 @@
 # ==============================================================================
 
 {{- $checkReady := dict }}
-{{- range $key := list "helm-release-argocd" "github-repository" "argocd-projects-app" "crossplane-app-project" "crossplane-configs-app" "crossplane-provider-configs-app" "external-secret-argocd-repo-creds" }}
+{{- range $key := list "helm-release-argocd" "github-repository" "argocd-apps" "crossplane-app" "external-secret-argocd-repo-creds" }}
   {{- $entry := get $observed $key | default dict }}
   {{- $resource := $entry.resource | default dict }}
   {{- $status := $resource.status | default dict }}
@@ -44,10 +44,8 @@
     "url" $observedRepoUrl
   )
   "repoCreds" (dict "ready" (get $checkReady "external-secret-argocd-repo-creds"))
-  "projectsApp" (dict "ready" (get $checkReady "argocd-projects-app"))
-  "crossplaneProject" (dict "ready" (get $checkReady "crossplane-app-project"))
-  "crossplaneConfigs" (dict "ready" (get $checkReady "crossplane-configs-app"))
-  "crossplaneProviderConfigs" (dict "ready" (get $checkReady "crossplane-provider-configs-app"))
+  "projectsApp" (dict "ready" (get $checkReady "argocd-apps"))
+  "crossplaneApp" (dict "ready" (get $checkReady "crossplane-app"))
 ) }}
 
 # ==============================================================================

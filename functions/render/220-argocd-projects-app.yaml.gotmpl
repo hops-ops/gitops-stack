@@ -20,9 +20,9 @@
 apiVersion: kubernetes.m.crossplane.io/v1alpha1
 kind: Object
 metadata:
-  name: {{ $state.name }}-argocd-projects-app
+  name: {{ $state.name }}-argocd-apps
   annotations:
-    {{ setResourceNameAnnotation "argocd-projects-app" }}
+    {{ setResourceNameAnnotation "argocd-apps" }}
   labels: {{ $state.labels | toJson }}
 spec:
   managementPolicies: {{ $state.managementPolicies | toJson }}
@@ -60,7 +60,7 @@ spec:
 apiVersion: protection.crossplane.io/v1beta1
 kind: Usage
 metadata:
-  name: {{ $state.name }}-delete-projects-app-before-argocd
+  name: {{ $state.name }}-delete-apps-before-argocd
   annotations:
     {{ setResourceNameAnnotation "usage-projects-argocd" }}
   labels: {{ $state.labels | toJson }}
@@ -75,7 +75,7 @@ spec:
     apiVersion: kubernetes.m.crossplane.io/v1alpha1
     kind: Object
     resourceRef:
-      name: {{ $state.name }}-argocd-projects-app
+      name: {{ $state.name }}-argocd-apps
 {{- end }}
 
 {{- end }}
