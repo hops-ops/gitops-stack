@@ -171,9 +171,9 @@ _items = [
                                 redis.resources.requests = {cpu = "10m", memory = "32Mi"}
                             }
                         }
-                        # Enable projects app to verify creation and ordered deletion
+                        # Enable apps Application to verify creation and ordered deletion
                         applications = {
-                            projects.enabled = True
+                            apps.enabled = True
                         }
                     }
                 }

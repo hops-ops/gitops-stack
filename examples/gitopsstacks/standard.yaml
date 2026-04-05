@@ -24,8 +24,8 @@ spec:
         ingress:
           enabled: false
   applications:
-    projects:
+    apps:
       enabled: true
-      path: .gitops/deploy
+      path: apps
     crossplane:
       enabled: true

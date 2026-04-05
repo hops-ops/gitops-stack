@@ -241,8 +241,8 @@ The Usage ensures ArgoCD CRDs stay alive until all ArgoCD Application CRs are cl
 | `repository.template.repository` | string | no | — | Template repo name |
 | `repository.topics` | []string | no | `[]` | Repository topics |
 | `repository.deleteBranchOnMerge` | boolean | no | `true` | Auto-delete head branches on merge |
-| `applications.projects.enabled` | boolean | no | `true` | Deploy the root Projects Application |
-| `applications.projects.path` | string | no | `.gitops/deploy` | Path in repo to sync |
+| `applications.apps.enabled` | boolean | no | `true` | Deploy the root app-of-apps Application |
+| `applications.apps.path` | string | no | `apps` | Path in repo to sync |
 | `applications.crossplane.enabled` | boolean | no | `false` | Deploy Crossplane integration apps |
 
 **ArgoCD chart defaults** (merged with `argocd.values`):

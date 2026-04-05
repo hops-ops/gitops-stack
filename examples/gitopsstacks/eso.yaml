@@ -21,6 +21,6 @@ spec:
       installationIdKey: installationId
       privateKeyKey: privateKey
   applications:
-    projects:
+    apps:
       enabled: true
-      path: .gitops/deploy
+      path: apps
