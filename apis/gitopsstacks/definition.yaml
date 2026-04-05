@@ -176,12 +176,12 @@ spec:
                 description: ArgoCD Application configuration.
                 type: object
                 properties:
-                  projects:
-                    description: Root ArgoCD Application that syncs projects from the gitops repo.
+                  apps:
+                    description: Root app-of-apps Application that syncs ArgoCD Application manifests from the gitops repo.
                     type: object
                     properties:
                       enabled:
-                        description: Enable the projects Application. Defaults to true.
+                        description: Enable the apps Application. Defaults to true.
                         type: boolean
                       path:
                         description: Path in the gitops repo to sync. Defaults to apps.

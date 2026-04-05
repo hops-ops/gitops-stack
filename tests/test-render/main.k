@@ -306,7 +306,7 @@ _items = [
                     spec.forProvider.manifest = {
                         apiVersion = "argoproj.io/v1alpha1"
                         kind = "Application"
-                        metadata.name = "projects"
+                        metadata.name = "apps"
                         spec.source = {
                             path = "apps"
                             repoURL = "https://github.com/hops-ops/test-cluster-gitops.git"
@@ -486,7 +486,7 @@ _items = [
                 spec = {
                     clusterName = "test-cluster"
                     repository.org = "hops-ops"
-                    applications.projects.path = "deploy/argocd"
+                    applications.apps.path = "deploy/argocd"
                 }
             }
             observedResources = _argocdReady

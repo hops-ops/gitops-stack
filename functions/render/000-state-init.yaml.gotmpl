@@ -69,7 +69,7 @@
 # Applications configuration
 # ==============================================================================
 {{- $appsSpec := $spec.applications | default dict }}
-{{- $projectsSpec := $appsSpec.projects | default dict }}
+{{- $appsAppsSpec := $appsSpec.apps | default dict }}
 {{- $crossplaneSpec := $appsSpec.crossplane | default dict }}
 
 # ==============================================================================
@@ -113,9 +113,9 @@
     )
   )
   "applications" (dict
-    "projects" (dict
-      "enabled" ($projectsSpec.enabled | default true)
-      "path" ($projectsSpec.path | default "apps")
+    "apps" (dict
+      "enabled" ($appsAppsSpec.enabled | default true)
+      "path" ($appsAppsSpec.path | default "apps")
     )
     "crossplane" (dict
       "enabled" ($crossplaneSpec.enabled | default false)

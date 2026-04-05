@@ -1,9 +1,9 @@
 # code: language=yaml
 #
-# ArgoCD Application: projects
+# ArgoCD Application: apps
 #
-# Syncs from the gitops repo's deploy path to bootstrap ArgoCD projects
-# and applications. Gated on ArgoCD being ready.
+# Root app-of-apps Application that syncs ArgoCD Application manifests
+# from the gitops repo's apps/ directory. Gated on ArgoCD being ready.
 #
 
 {{- $obs := $state.observed }}
@@ -15,7 +15,7 @@
   {{- $repoCredsReady = $obs.repoCreds.ready }}
 {{- end }}
 
-{{- if and $apps.projects.enabled $obs.argocd.ready $repoCredsReady }}
+{{- if and $apps.apps.enabled $obs.argocd.ready $repoCredsReady }}
 ---
 apiVersion: kubernetes.m.crossplane.io/v1alpha1
 kind: Object
@@ -31,7 +31,7 @@ spec:
       apiVersion: argoproj.io/v1alpha1
       kind: Application
       metadata:
-        name: projects
+        name: apps
         namespace: {{ $state.argocd.namespace }}
         finalizers:
         - resources-finalizer.argocd.argoproj.io
@@ -41,7 +41,7 @@ spec:
           server: https://kubernetes.default.svc
         project: default
         source:
-          path: {{ $apps.projects.path }}
+          path: {{ $apps.apps.path }}
           repoURL: {{ $repo.url }}
           targetRevision: HEAD
         syncPolicy:
@@ -62,7 +62,7 @@ kind: Usage
 metadata:
   name: {{ $state.name }}-delete-apps-before-argocd
   annotations:
-    {{ setResourceNameAnnotation "usage-projects-argocd" }}
+    {{ setResourceNameAnnotation "usage-apps-argocd" }}
   labels: {{ $state.labels | toJson }}
 spec:
   replayDeletion: true

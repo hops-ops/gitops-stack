@@ -44,7 +44,7 @@
     "url" $observedRepoUrl
   )
   "repoCreds" (dict "ready" (get $checkReady "external-secret-argocd-repo-creds"))
-  "projectsApp" (dict "ready" (get $checkReady "argocd-apps"))
+  "appsApp" (dict "ready" (get $checkReady "argocd-apps"))
   "crossplaneApp" (dict "ready" (get $checkReady "crossplane-app"))
 ) }}
 
