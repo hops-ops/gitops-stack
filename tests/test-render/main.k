@@ -104,7 +104,7 @@ _items = [
                         name = "argocd"
                         labels = {
                             "hops.ops.com.ai/managed" = "true"
-                            "hops.ops.com.ai/gitops" = "labeled-gitops"
+                            "hops.ops.com.ai/gitopsstack" = "labeled-gitops"
                             team = "platform"
                             environment = "staging"
                         }
@@ -117,7 +117,7 @@ _items = [
                         name = "test-cluster-gitops"
                         labels = {
                             "hops.ops.com.ai/managed" = "true"
-                            "hops.ops.com.ai/gitops" = "labeled-gitops"
+                            "hops.ops.com.ai/gitopsstack" = "labeled-gitops"
                             team = "platform"
                             environment = "staging"
                         }
