@@ -141,6 +141,7 @@ _items = [
                     spec = {
                         clusterName = "default"
                         namespace = "argocd"
+                        managementPolicies = ["*"]
                         labels = {
                             "hops.ops.com.ai/e2etest" = "true"
                             "hops.ops.com.ai/test-run" = _now
@@ -161,6 +162,7 @@ _items = [
                             org = "hops-ops"
                             name = _test_name
                             description = "E2E test repo - safe to delete"
+                            allowDelete = True
                         }
                         argocd = {
                             values = {

@@ -18,7 +18,7 @@
 # Labels
 {{- $defaultLabels := dict
   "hops.ops.com.ai/managed" "true"
-  "hops.ops.com.ai/gitops" $name
+  (printf "hops.ops.com.ai/%s" (lower $xr.kind)) $name
 }}
 {{- $labels := merge $defaultLabels ($spec.labels | default dict) }}
 
