@@ -29,6 +29,32 @@ spec:
     values:
       {{- toYaml $argo.overrideAllValues | nindent 6 }}
     {{- else }}
+    {{- /* Resource defaults. application-controller is the StatefulSet that
+         actually does reconciliation (heaviest component, holds the full
+         repo state in memory). Memory request==limit for Guaranteed protection;
+         CPU request only, no limit so it can burst. The rest are Burstable
+         restart-cheap controllers/webhooks/proxies.
+         See references/karpenter-resource-best-practices §7. */}}
+    {{- $controllerResources := dict
+      "requests" (dict "cpu" "250m" "memory" "1Gi")
+      "limits" (dict "memory" "1Gi")
+    }}
+    {{- $repoServerResources := dict
+      "requests" (dict "cpu" "100m" "memory" "256Mi")
+      "limits" (dict "cpu" "500m" "memory" "512Mi")
+    }}
+    {{- $serverResources := dict
+      "requests" (dict "cpu" "50m" "memory" "128Mi")
+      "limits" (dict "cpu" "200m" "memory" "256Mi")
+    }}
+    {{- $smallControllerResources := dict
+      "requests" (dict "cpu" "25m" "memory" "64Mi")
+      "limits" (dict "cpu" "100m" "memory" "128Mi")
+    }}
+    {{- $redisResources := dict
+      "requests" (dict "cpu" "50m" "memory" "64Mi")
+      "limits" (dict "cpu" "100m" "memory" "128Mi")
+    }}
     {{- $chartDefaults := dict
       "crds" (dict "install" true)
       "global" (dict
@@ -37,6 +63,13 @@ spec:
           "serviceMonitor" (dict "enabled" true)
         )
       )
+      "controller" (dict "resources" $controllerResources)
+      "repoServer" (dict "resources" $repoServerResources)
+      "server" (dict "resources" $serverResources)
+      "applicationSet" (dict "resources" $smallControllerResources)
+      "notifications" (dict "resources" $smallControllerResources)
+      "dex" (dict "resources" $smallControllerResources)
+      "redis" (dict "resources" $redisResources)
     }}
     {{- $mergedValues := mergeOverwrite $chartDefaults ($argo.values | default dict) }}
     values:
