@@ -35,9 +35,12 @@ spec:
          CPU request only, no limit so it can burst. The rest are Burstable
          restart-cheap controllers/webhooks/proxies.
          See references/karpenter-resource-best-practices §7. */}}
+    {{- /* application-controller P95 observed at 1047Mi on pat-local — needs
+         real headroom beyond the chart's "small cluster" sizing. 1.5Gi covers
+         the cluster-wide state cache for our app count with margin. */}}
     {{- $controllerResources := dict
-      "requests" (dict "cpu" "250m" "memory" "1Gi")
-      "limits" (dict "memory" "1Gi")
+      "requests" (dict "cpu" "250m" "memory" "1536Mi")
+      "limits" (dict "memory" "1536Mi")
     }}
     {{- $repoServerResources := dict
       "requests" (dict "cpu" "100m" "memory" "256Mi")
