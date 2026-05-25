@@ -35,37 +35,42 @@ spec:
          CPU request only, no limit so it can burst. The rest are Burstable
          restart-cheap controllers/webhooks/proxies.
          See references/karpenter-resource-best-practices §7. */}}
-    {{- /* application-controller P95 observed at 1047Mi on pat-local — needs
-         real headroom beyond the chart's "small cluster" sizing. 1.5Gi covers
-         the cluster-wide state cache for our app count with margin. */}}
+    {{- /* application-controller is sized from current VPA/Goldilocks
+         recommendations on pat-local. */}}
     {{- $controllerResources := dict
-      "requests" (dict "cpu" "250m" "memory" "1536Mi")
-      "limits" (dict "memory" "1536Mi")
+      "requests" (dict "cpu" "548m" "memory" "2062Mi")
+      "limits" (dict "memory" "2062Mi")
     }}
     {{- $repoServerResources := dict
-      "requests" (dict "cpu" "100m" "memory" "256Mi")
+      "requests" (dict "cpu" "15m" "memory" "100Mi")
       "limits" (dict "cpu" "500m" "memory" "512Mi")
     }}
     {{- $serverResources := dict
-      "requests" (dict "cpu" "50m" "memory" "128Mi")
-      "limits" (dict "cpu" "200m" "memory" "256Mi")
+      "requests" (dict "cpu" "15m" "memory" "100Mi")
+      "limits" (dict "cpu" "250m" "memory" "256Mi")
     }}
     {{- $smallControllerResources := dict
-      "requests" (dict "cpu" "25m" "memory" "64Mi")
-      "limits" (dict "cpu" "100m" "memory" "128Mi")
+      "requests" (dict "cpu" "15m" "memory" "100Mi")
+      "limits" (dict "cpu" "100m" "memory" "256Mi")
     }}
     {{- $redisResources := dict
-      "requests" (dict "cpu" "50m" "memory" "64Mi")
-      "limits" (dict "cpu" "100m" "memory" "128Mi")
+      "requests" (dict "cpu" "15m" "memory" "100Mi")
+      "limits" (dict "cpu" "100m" "memory" "256Mi")
     }}
+    {{- $globalValues := dict
+      "monitoring" (dict
+        "enabled" true
+        "serviceMonitor" (dict "enabled" true)
+      )
+      "nodeSelector" (dict "kubernetes.io/os" "linux")
+    }}
+    {{- if $state.nodePool.enabled }}
+      {{- $_ := set $globalValues "nodeSelector" (mergeOverwrite (dict "kubernetes.io/os" "linux") $state.nodePool.nodeSelector) }}
+      {{- $_ := set $globalValues "tolerations" $state.nodePool.tolerations }}
+    {{- end }}
     {{- $chartDefaults := dict
       "crds" (dict "install" true)
-      "global" (dict
-        "monitoring" (dict
-          "enabled" true
-          "serviceMonitor" (dict "enabled" true)
-        )
-      )
+      "global" $globalValues
       "controller" (dict "resources" $controllerResources)
       "repoServer" (dict "resources" $repoServerResources)
       "server" (dict "resources" $serverResources)
