@@ -1,0 +1,14 @@
+apiVersion: hops.ops.com.ai/v1alpha1
+kind: GitopsStack
+metadata:
+  name: gitops
+  namespace: example-env
+spec:
+  clusterName: example-cluster
+  labels:
+    team: platform
+  nodePool:
+    enabled: true
+  repository:
+    org: hops-ops
+    name: example-cluster-gitops

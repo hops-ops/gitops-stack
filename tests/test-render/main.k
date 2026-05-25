@@ -755,6 +755,81 @@ _items = [
             ]
         }
     }
+
+    # ==========================================================================
+    # Test 18: nodePool enables Argo CD placement and renders a Karpenter NodePool
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "nodepool-adds-argocd-placement-and-resources"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = stacksv1alpha1.GitopsStack {
+                metadata.name = "nodepool-test"
+                spec = {
+                    clusterName = "test-cluster"
+                    repository.org = "hops-ops"
+                    nodePool.enabled = True
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "argocd"
+                    spec.forProvider.values = {
+                        global = {
+                            nodeSelector = {
+                                "kubernetes.io/os" = "linux"
+                                "workload-type" = "gitops"
+                            }
+                            tolerations = [
+                                {
+                                    key = "gitops"
+                                    operator = "Equal"
+                                    value = "true"
+                                    effect = "NoSchedule"
+                                }
+                            ]
+                        }
+                        controller.resources.requests = {
+                            cpu = "548m"
+                            memory = "2062Mi"
+                        }
+                        repoServer.resources.requests = {
+                            cpu = "15m"
+                            memory = "100Mi"
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "nodepool-test-nodepool-gitops"
+                    spec.forProvider.manifest = {
+                        apiVersion = "karpenter.sh/v1"
+                        kind = "NodePool"
+                        metadata.name = "hops-gitops"
+                        spec.template.metadata.labels = {"workload-type" = "gitops"}
+                        spec.template.spec.taints = [
+                            {
+                                key = "gitops"
+                                value = "true"
+                                effect = "NoSchedule"
+                            }
+                        ]
+                    }
+                }
+                {
+                    apiVersion = "protection.crossplane.io/v1beta1"
+                    kind = "Usage"
+                    metadata.name = "nodepool-test-delete-argocd-before-nodepool"
+                }
+            ]
+        }
+    }
 ]
 
 items = _items

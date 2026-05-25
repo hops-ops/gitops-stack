@@ -1,0 +1,64 @@
+# code: language=yaml
+#
+# Optional Karpenter NodePool for GitOps workloads.
+#
+
+{{- if $state.nodePool.enabled }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-nodepool-gitops
+  annotations:
+    {{ setResourceNameAnnotation "nodepool-gitops" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    manifest:
+      apiVersion: karpenter.sh/v1
+      kind: NodePool
+      metadata:
+        name: {{ $state.nodePool.name }}
+      spec:
+        template:
+          metadata:
+            labels:
+              workload-type: gitops
+          spec:
+            nodeClassRef:
+              group: eks.amazonaws.com
+              kind: NodeClass
+              name: {{ $state.nodePool.nodeClassName }}
+            taints:
+            - key: {{ $state.nodePool.taintKey }}
+              value: {{ $state.nodePool.taintValue | quote }}
+              effect: NoSchedule
+            requirements: {{ $state.nodePool.requirements | toJson }}
+        limits: {{ $state.nodePool.limits | toJson }}
+        disruption: {{ $state.nodePool.disruption | toJson }}
+  providerConfigRef:
+    name: {{ $state.kubernetesProviderConfigRef.name }}
+    kind: {{ $state.kubernetesProviderConfigRef.kind }}
+
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-argocd-before-nodepool
+  annotations:
+    {{ setResourceNameAnnotation "usage-argocd-before-nodepool" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-nodepool-gitops
+  by:
+    apiVersion: helm.m.crossplane.io/v1beta1
+    kind: Release
+    resourceRef:
+      name: {{ $state.argocd.name }}
+{{- end }}

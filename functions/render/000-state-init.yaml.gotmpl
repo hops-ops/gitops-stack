@@ -44,6 +44,36 @@
 }}
 
 # ==============================================================================
+# NodePool configuration
+# ==============================================================================
+{{- $nodePoolSpec := $spec.nodePool | default dict }}
+{{- $nodePoolEnabled := false }}
+{{- if hasKey $nodePoolSpec "enabled" }}
+  {{- $nodePoolEnabled = $nodePoolSpec.enabled }}
+{{- end }}
+{{- $nodePoolName := $nodePoolSpec.name | default "hops-gitops" }}
+{{- $nodePoolNodeClassName := $nodePoolSpec.nodeClassName | default "hops-default" }}
+{{- $nodePoolLimits := $nodePoolSpec.limits | default (dict "nodes" 10) }}
+{{- $nodePoolRequirements := $nodePoolSpec.requirements | default (list
+  (dict "key" "karpenter.sh/capacity-type" "operator" "In" "values" (list "spot" "on-demand"))
+  (dict "key" "eks.amazonaws.com/instance-category" "operator" "In" "values" (list "c" "m" "r"))
+  (dict "key" "eks.amazonaws.com/instance-generation" "operator" "Gt" "values" (list "4"))
+  (dict "key" "eks.amazonaws.com/instance-memory" "operator" "Gt" "values" (list "7999"))
+  (dict "key" "eks.amazonaws.com/instance-cpu" "operator" "Gt" "values" (list "1"))
+  (dict "key" "kubernetes.io/arch" "operator" "In" "values" (list "amd64"))
+  (dict "key" "kubernetes.io/os" "operator" "In" "values" (list "linux"))
+) }}
+{{- $nodePoolDisruption := $nodePoolSpec.disruption | default (dict "consolidationPolicy" "WhenEmptyOrUnderutilized" "consolidateAfter" "60s") }}
+{{- $nodePoolTaintKey := "gitops" }}
+{{- $nodePoolTaintValue := "true" }}
+{{- $nodePoolNodeSelector := dict }}
+{{- $nodePoolTolerations := list }}
+{{- if $nodePoolEnabled }}
+  {{- $nodePoolNodeSelector = dict "workload-type" "gitops" }}
+  {{- $nodePoolTolerations = list (dict "key" $nodePoolTaintKey "operator" "Equal" "value" $nodePoolTaintValue "effect" "NoSchedule") }}
+{{- end }}
+
+# ==============================================================================
 # ArgoCD configuration
 # ==============================================================================
 {{- $argocdSpec := $spec.argocd | default dict }}
@@ -84,6 +114,18 @@
   "helmProviderConfigRef" $helmProviderConfigRef
   "kubernetesProviderConfigRef" $k8sProviderConfigRef
   "githubProviderConfigRef" $ghProviderConfigRef
+  "nodePool" (dict
+    "enabled" $nodePoolEnabled
+    "name" $nodePoolName
+    "nodeClassName" $nodePoolNodeClassName
+    "limits" $nodePoolLimits
+    "requirements" $nodePoolRequirements
+    "disruption" $nodePoolDisruption
+    "taintKey" $nodePoolTaintKey
+    "taintValue" $nodePoolTaintValue
+    "nodeSelector" $nodePoolNodeSelector
+    "tolerations" $nodePoolTolerations
+  )
   "argocd" (dict
     "name" ($argocdSpec.name | default "argocd")
     "namespace" ($argocdSpec.namespace | default $namespace)

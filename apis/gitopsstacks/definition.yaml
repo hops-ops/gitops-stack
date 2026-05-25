@@ -76,6 +76,34 @@ spec:
                     enum:
                     - ProviderConfig
                     - ClusterProviderConfig
+              nodePool:
+                description: Optional dedicated Karpenter NodePool for GitOps workloads. When enabled, ArgoCD pods are scheduled with workload-type=gitops and tolerate gitops=true:NoSchedule.
+                type: object
+                properties:
+                  enabled:
+                    description: Whether to create a dedicated NodePool. Defaults to false.
+                    type: boolean
+                    default: false
+                  name:
+                    description: NodePool name on the target cluster. Defaults to "hops-gitops".
+                    type: string
+                  nodeClassName:
+                    description: EKS Auto Mode NodeClass to reference. Defaults to "hops-default".
+                    type: string
+                  limits:
+                    description: Karpenter NodePool resource limits. Defaults to nodes=10.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  requirements:
+                    description: Karpenter scheduling requirements. Defaults to amd64/linux spot or on-demand nodes.
+                    type: array
+                    items:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                  disruption:
+                    description: Karpenter disruption settings. Defaults to WhenEmptyOrUnderutilized after 60s.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
               namespace:
                 description: Namespace for ArgoCD. Defaults to argocd.
                 type: string
