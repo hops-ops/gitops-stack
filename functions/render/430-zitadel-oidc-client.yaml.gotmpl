@@ -18,6 +18,17 @@ spec:
   managementPolicies: {{ $state.managementPolicies | toJson }}
   readiness:
     policy: DeriveFromObject
+  # Export only the generated OAuth client ID to this composed resource's
+  # connection details. The client secret stays in the target cluster Secret.
+  connectionDetails:
+  - apiVersion: v1
+    kind: Secret
+    name: {{ $z.clientSecretName }}
+    namespace: {{ $state.argocd.namespace }}
+    fieldPath: data[attribute.client_id]
+    toConnectionSecretKey: client_id
+  writeConnectionSecretToRef:
+    name: {{ $state.name }}-zitadel-oidc-client-id
   forProvider:
     manifest:
       apiVersion: application.zitadel.m.crossplane.io/v1alpha1
