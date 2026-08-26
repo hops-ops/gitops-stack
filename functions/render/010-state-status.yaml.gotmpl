@@ -25,11 +25,17 @@
   {{- $checkExists = set $checkExists $key (gt (len $resource) 0) }}
 {{- end }}
 
-# Extract the generated Zitadel client ID from the target OIDC resource
-# observed through provider-kubernetes Object status.
+# Extract the generated OAuth client ID published by provider-kubernetes. The
+# value in the function request is base64-encoded connection data. Do not use
+# the target OIDC resource's status.atProvider.id here; that is the Zitadel
+# application resource ID, not the OAuth client ID accepted by /oauth/v2/auth.
 {{- $oidcEntry := get $observed "zitadel-oidc-client" | default dict }}
-{{- $oidcManifest := dig "resource" "status" "atProvider" "manifest" dict $oidcEntry }}
-{{- $oidcClientId := dig "status" "atProvider" "id" "" $oidcManifest }}
+{{- $oidcConnectionDetails := get $oidcEntry "connectionDetails" | default dict }}
+{{- $oidcClientIdEncoded := get $oidcConnectionDetails "client_id" | default "" }}
+{{- $oidcClientId := "" }}
+{{- if $oidcClientIdEncoded }}
+  {{- $oidcClientId = $oidcClientIdEncoded | b64dec }}
+{{- end }}
 
 # Extract repository URL from observed state
 {{- $repoEntry := get $observed "github-repository" | default dict }}

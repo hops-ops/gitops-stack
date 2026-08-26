@@ -12,10 +12,3 @@ status:
     status: "True"
   - type: Synced
     status: "True"
-  atProvider:
-    manifest:
-      apiVersion: application.zitadel.m.crossplane.io/v1alpha1
-      kind: Oidc
-      status:
-        atProvider:
-          id: "330000000000000001"
