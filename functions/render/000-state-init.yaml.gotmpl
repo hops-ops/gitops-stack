@@ -79,6 +79,46 @@
 {{- $argocdSpec := $spec.argocd | default dict }}
 
 # ==============================================================================
+# Public exposure
+# ==============================================================================
+{{- $exposureSpec := $spec.exposure | default dict }}
+{{- $exposureEnabled := false }}
+{{- if hasKey $exposureSpec "enabled" }}
+  {{- $exposureEnabled = $exposureSpec.enabled }}
+{{- end }}
+{{- $exposureHostname := $exposureSpec.hostname | default "" }}
+{{- $gatewayRefSpec := $exposureSpec.gatewayRef | default dict }}
+{{- if and $exposureEnabled (eq $exposureHostname "") }}
+  {{- fail "spec.exposure.hostname is required when spec.exposure.enabled is true" }}
+{{- end }}
+
+# ==============================================================================
+# Native OIDC backed by Zitadel
+# ==============================================================================
+{{- $authSpec := $spec.auth | default dict }}
+{{- $oidcSpec := $authSpec.oidc | default dict }}
+{{- $oidcEnabled := false }}
+{{- if hasKey $oidcSpec "enabled" }}
+  {{- $oidcEnabled = $oidcSpec.enabled }}
+{{- end }}
+{{- $zitadelSpec := $oidcSpec.zitadel | default dict }}
+{{- $oidcIssuerURL := $oidcSpec.issuerURL | default "" }}
+{{- $zitadelDomain := $oidcIssuerURL | trimPrefix "https://" | trimPrefix "http://" }}
+{{- $zitadelDomain = (splitn "/" 2 $zitadelDomain)._0 }}
+{{- $oidcRbacSpec := $oidcSpec.rbac | default dict }}
+{{- if $oidcEnabled }}
+  {{- if not $exposureEnabled }}
+    {{- fail "spec.exposure.enabled must be true when spec.auth.oidc.enabled is true" }}
+  {{- end }}
+  {{- if eq $oidcIssuerURL "" }}
+    {{- fail "spec.auth.oidc.issuerURL is required when OIDC is enabled" }}
+  {{- end }}
+  {{- if eq ($zitadelSpec.awsSecretsManagerPath | default "") "" }}
+    {{- fail "spec.auth.oidc.zitadel.awsSecretsManagerPath is required when OIDC is enabled" }}
+  {{- end }}
+{{- end }}
+
+# ==============================================================================
 # Repository configuration
 # ==============================================================================
 {{- $repoSpec := $spec.repository | default dict }}
@@ -144,6 +184,39 @@
     "namespace" ($argocdSpec.namespace | default $namespace)
     "values" ($argocdSpec.values | default dict)
     "overrideAllValues" ($argocdSpec.overrideAllValues | default dict)
+  )
+  "exposure" (dict
+    "enabled" $exposureEnabled
+    "hostname" $exposureHostname
+    "gatewayRef" (dict
+      "name" ($gatewayRefSpec.name | default "platform")
+      "namespace" ($gatewayRefSpec.namespace | default "istio-ingress")
+      "sectionName" ($gatewayRefSpec.sectionName | default "https")
+    )
+  )
+  "auth" (dict
+    "oidc" (dict
+      "enabled" $oidcEnabled
+      "name" ($oidcSpec.name | default "Zitadel")
+      "issuerURL" $oidcIssuerURL
+      "requestedScopes" ($oidcSpec.requestedScopes | default (list "openid" "profile" "email"))
+      "rbac" (dict
+        "adminEmails" ($oidcRbacSpec.adminEmails | default list)
+      )
+      "zitadel" (dict
+        "domain" $zitadelDomain
+        "awsSecretsManagerPath" ($zitadelSpec.awsSecretsManagerPath | default "")
+        "accessTokenProperty" ($zitadelSpec.accessTokenProperty | default "access_token")
+        "secretStoreName" ($zitadelSpec.secretStoreName | default "default")
+        "projectName" ($zitadelSpec.projectName | default (printf "%s-argocd" $clusterName))
+        "applicationName" ($zitadelSpec.applicationName | default (printf "%s-argocd" $clusterName))
+        "providerConfigName" (printf "%s-zitadel" $name)
+        "credentialsSecretName" (printf "%s-zitadel-credentials" $name)
+        "projectResourceName" (printf "%s-argocd" $name)
+        "oidcResourceName" (printf "%s-argocd" $name)
+        "clientSecretName" (printf "%s-argocd-oidc-client" $name)
+      )
+    )
   )
   "repository" (dict
     "org" $repoOrg

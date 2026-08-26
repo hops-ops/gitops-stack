@@ -1,0 +1,64 @@
+# code: language=yaml
+#
+# Dedicated Zitadel Project for the ArgoCD OIDC application.
+
+{{- $oidc := $state.auth.oidc }}
+{{- $z := $oidc.zitadel }}
+{{- if $oidc.enabled }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-zitadel-project
+  annotations:
+    {{ setResourceNameAnnotation "zitadel-project" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  readiness:
+    policy: DeriveFromObject
+  forProvider:
+    manifest:
+      apiVersion: project.zitadel.m.crossplane.io/v1alpha1
+      kind: Project
+      metadata:
+        name: {{ $z.projectResourceName }}
+        namespace: {{ $state.argocd.namespace }}
+        labels: {{ $state.labels | toJson }}
+      spec:
+        managementPolicies: {{ $state.managementPolicies | toJson }}
+        forProvider:
+          name: {{ $z.projectName | quote }}
+          hasProjectCheck: false
+          projectRoleAssertion: true
+          projectRoleCheck: false
+        providerConfigRef:
+          name: {{ $z.providerConfigName }}
+          kind: ProviderConfig
+  providerConfigRef:
+    name: {{ $state.kubernetesProviderConfigRef.name }}
+    kind: {{ $state.kubernetesProviderConfigRef.kind }}
+
+{{- if and $state.observed.zitadel.providerConfigReady $state.observed.zitadel.projectReady }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-zitadel-project-before-provider
+  annotations:
+    {{ setResourceNameAnnotation "usage-zitadel-project-provider" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-zitadel-provider-config
+  by:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-zitadel-project
+{{- end }}
+{{- end }}

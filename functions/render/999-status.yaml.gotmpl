@@ -11,3 +11,7 @@ status:
   ready: {{ $state.status.ready }}
   repository:
     url: {{ $state.status.repository.url }}
+  {{- if $state.status.oidc.clientId }}
+  oidc:
+    clientId: {{ $state.status.oidc.clientId | quote }}
+  {{- end }}

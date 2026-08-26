@@ -1,0 +1,128 @@
+# code: language=yaml
+#
+# Confidential web client used by ArgoCD's native OIDC support. The callback is
+# ArgoCD's direct OIDC callback, not the embedded Dex callback.
+
+{{- $oidc := $state.auth.oidc }}
+{{- $z := $oidc.zitadel }}
+{{- if $oidc.enabled }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-zitadel-oidc-client
+  annotations:
+    {{ setResourceNameAnnotation "zitadel-oidc-client" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  readiness:
+    policy: DeriveFromObject
+  forProvider:
+    manifest:
+      apiVersion: application.zitadel.m.crossplane.io/v1alpha1
+      kind: Oidc
+      metadata:
+        name: {{ $z.oidcResourceName }}
+        namespace: {{ $state.argocd.namespace }}
+        labels: {{ $state.labels | toJson }}
+      spec:
+        managementPolicies: {{ $state.managementPolicies | toJson }}
+        forProvider:
+          name: {{ $z.applicationName | quote }}
+          projectIdRef:
+            name: {{ $z.projectResourceName }}
+          appType: OIDC_APP_TYPE_WEB
+          authMethodType: OIDC_AUTH_METHOD_TYPE_BASIC
+          grantTypes:
+          - OIDC_GRANT_TYPE_AUTHORIZATION_CODE
+          - OIDC_GRANT_TYPE_REFRESH_TOKEN
+          responseTypes:
+          - OIDC_RESPONSE_TYPE_CODE
+          redirectUris:
+          - {{ printf "https://%s/auth/callback" $state.exposure.hostname | quote }}
+          postLogoutRedirectUris:
+          - {{ printf "https://%s/" $state.exposure.hostname | quote }}
+          accessTokenType: OIDC_TOKEN_TYPE_BEARER
+          accessTokenRoleAssertion: true
+          idTokenRoleAssertion: true
+          idTokenUserinfoAssertion: true
+          devMode: false
+        writeConnectionSecretToRef:
+          name: {{ $z.clientSecretName }}
+        providerConfigRef:
+          name: {{ $z.providerConfigName }}
+          kind: ProviderConfig
+  providerConfigRef:
+    name: {{ $state.kubernetesProviderConfigRef.name }}
+    kind: {{ $state.kubernetesProviderConfigRef.kind }}
+
+{{- if and $state.observed.zitadel.projectReady $state.observed.zitadel.oidcReady }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-zitadel-oidc-before-project
+  annotations:
+    {{ setResourceNameAnnotation "usage-zitadel-oidc-project" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-zitadel-project
+  by:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-zitadel-oidc-client
+{{- end }}
+
+{{- if and $state.observed.zitadel.providerConfigReady $state.observed.zitadel.oidcReady }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-zitadel-oidc-before-provider
+  annotations:
+    {{ setResourceNameAnnotation "usage-zitadel-oidc-provider" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-zitadel-provider-config
+  by:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-zitadel-oidc-client
+{{- end }}
+
+{{- if and $state.observed.argocd.ready $state.observed.zitadel.oidcReady }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-argocd-before-zitadel-oidc
+  annotations:
+    {{ setResourceNameAnnotation "usage-argocd-zitadel-oidc" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-zitadel-oidc-client
+  by:
+    apiVersion: helm.m.crossplane.io/v1beta1
+    kind: Release
+    resourceRef:
+      name: {{ $state.argocd.name }}
+{{- end }}
+{{- end }}

@@ -25,9 +25,9 @@ spec:
       repository: https://argoproj.github.io/argo-helm
       version: 9.7.1
     namespace: {{ $argo.namespace }}
+    {{- $baseValues := dict }}
     {{- if $argo.overrideAllValues }}
-    values:
-      {{- toYaml $argo.overrideAllValues | nindent 6 }}
+      {{- $baseValues = deepCopy $argo.overrideAllValues }}
     {{- else }}
     {{- /* Resource defaults. application-controller is the StatefulSet that
          actually does reconciliation (heaviest component, holds the full
@@ -79,10 +79,67 @@ spec:
       "dex" (dict "resources" $smallControllerResources)
       "redis" (dict "resources" $redisResources)
     }}
-    {{- $mergedValues := mergeOverwrite $chartDefaults ($argo.values | default dict) }}
-    values:
-      {{- toYaml $mergedValues | nindent 6 }}
+    {{- $baseValues = mergeOverwrite $chartDefaults ($argo.values | default dict) }}
     {{- end }}
+
+    {{- /* Typed exposure and auth are integrations, not chart defaults. When
+         enabled they intentionally take precedence over raw values so the
+         Gateway callback URL and OIDC client cannot drift apart. */}}
+    {{- $effectiveValues := deepCopy $baseValues }}
+    {{- if $state.exposure.enabled }}
+      {{- $exposureValues := dict
+        "global" (dict "domain" $state.exposure.hostname)
+        "configs" (dict
+          "cm" (dict "url" (printf "https://%s" $state.exposure.hostname))
+          "params" (dict "server.insecure" "true")
+        )
+        "server" (dict
+          "httproute" (dict
+            "enabled" true
+            "parentRefs" (list (dict
+              "name" $state.exposure.gatewayRef.name
+              "namespace" $state.exposure.gatewayRef.namespace
+              "sectionName" $state.exposure.gatewayRef.sectionName
+            ))
+            "hostnames" (list $state.exposure.hostname)
+          )
+        )
+      }}
+      {{- $effectiveValues = mergeOverwrite $effectiveValues $exposureValues }}
+    {{- end }}
+
+    {{- $oidc := $state.auth.oidc }}
+    {{- if and $oidc.enabled $state.observed.zitadel.clientId }}
+      {{- $oidcConfig := dict
+        "name" $oidc.name
+        "issuer" $oidc.issuerURL
+        "clientID" $state.observed.zitadel.clientId
+        "clientSecret" (printf "$%s:attribute.client_secret" $oidc.zitadel.clientSecretName)
+        "requestedScopes" $oidc.requestedScopes
+      }}
+      {{- $oidcValues := dict "configs" (dict "cm" (dict "oidc.config" (toYaml $oidcConfig))) }}
+
+      {{- if gt (len $oidc.rbac.adminEmails) 0 }}
+        {{- $adminPolicy := "" }}
+        {{- range $email := $oidc.rbac.adminEmails }}
+          {{- $line := printf "g, %s, role:admin" $email }}
+          {{- $adminPolicy = ternary $line (printf "%s\n%s" $adminPolicy $line) (eq $adminPolicy "") }}
+        {{- end }}
+        {{- $existingPolicy := dig "configs" "rbac" "policy.csv" "" $effectiveValues }}
+        {{- if $existingPolicy }}
+          {{- $adminPolicy = printf "%s\n%s" $existingPolicy $adminPolicy }}
+        {{- end }}
+        {{- $oidcValues = mergeOverwrite $oidcValues (dict "configs" (dict "rbac" (dict
+          "policy.csv" $adminPolicy
+          "scopes" "[email]"
+        ))) }}
+      {{- end }}
+
+      {{- $effectiveValues = mergeOverwrite $effectiveValues $oidcValues }}
+    {{- end }}
+
+    values:
+      {{- toYaml $effectiveValues | nindent 6 }}
   rollbackLimit: 3
   providerConfigRef:
     name: {{ $state.helmProviderConfigRef.name }}

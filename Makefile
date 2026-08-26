@@ -32,7 +32,9 @@ EXAMPLES := \
     examples/gitopsstacks/eso.yaml:: \
     examples/gitopsstacks/eso.yaml::examples/test/mocks/observed-resources/eso/steps/1/ \
     examples/gitopsstacks/eso.yaml::examples/test/mocks/observed-resources/eso/steps/2/ \
-    examples/gitopsstacks/eso.yaml::examples/test/mocks/observed-resources/eso/steps/3/
+    examples/gitopsstacks/eso.yaml::examples/test/mocks/observed-resources/eso/steps/3/ \
+    examples/gitopsstacks/zitadel-oidc.yaml:: \
+    examples/gitopsstacks/zitadel-oidc.yaml::examples/test/mocks/observed-resources/zitadel-oidc/steps/1/
 
 # Render all examples (parallel execution, output shown per-job when complete)
 render\:all:

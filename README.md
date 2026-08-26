@@ -42,11 +42,14 @@ A single Crossplane resource that provisions a complete GitOps foundation: ArgoC
                   └── only if crossplane.enabled ──┘
 ```
 
-**Up to 7 composed resources:** 1 Helm Release + 1 GitHub Repository + up to 4 Kubernetes Objects + 1 Usage protection
+The base stack composes a Helm Release, GitHub Repository, ArgoCD Applications,
+and deletion-ordering Usages. Optional OIDC adds target-cluster objects for the
+Zitadel credentials, ProviderConfig, Project, OIDC application, and labeled
+client Secret.
 
 | Resource | Type | Purpose |
 |----------|------|---------|
-| ArgoCD | Helm Release (`argo-cd` v9.4.3) | Continuous delivery platform |
+| ArgoCD | Helm Release (`argo-cd` v9.7.1) | Continuous delivery platform |
 | GitHub Repository | `repo.github.m.upbound.io` | GitOps source repository |
 | Projects Application | Kubernetes Object (ArgoCD Application) | Syncs ArgoCD projects from the repo |
 | Deletion Usage | Usage | Ensures projects app deletes before ArgoCD |
@@ -171,6 +174,45 @@ spec:
 
 `overrideAllValues` replaces **all** defaults — chart defaults, monitoring config, everything. Use `values` for additive changes instead.
 
+### Stage 6: Gateway exposure and Zitadel OIDC
+
+Expose ArgoCD through an existing Gateway listener and configure ArgoCD's
+native OIDC support. GitopsStack creates a dedicated Zitadel Project and OIDC
+application in the target cluster. The generated client secret stays in
+Kubernetes and is referenced by name from `argocd-cm`; it is never stored in
+the XR or Helm values.
+
+```yaml
+spec:
+  exposure:
+    enabled: true
+    hostname: argocd.example.com
+    gatewayRef:
+      name: platform
+      namespace: istio-ingress
+      sectionName: https
+  auth:
+    oidc:
+      enabled: true
+      issuerURL: https://auth.example.com
+      rbac:
+        adminEmails:
+        - platform-admin@example.com
+      zitadel:
+        # AuthStack status.providerConfig.awsSecretsManagerPath
+        awsSecretsManagerPath: push/my-cluster/zitadel-credentials
+```
+
+Prerequisites are Gateway API, External Secrets Operator with the configured
+ClusterSecretStore, Crossplane's namespaced Zitadel provider in the target
+cluster, and an AuthStack-published management access token. TLS terminates at
+the Gateway, so the generated HTTPRoute sends cleartext HTTP to ArgoCD inside
+the cluster. ArgoCD CLI users should use `--grpc-web` through this HTTPRoute.
+
+When enabled, typed exposure and OIDC settings take precedence over conflicting
+raw Helm values so the public URL, callback, and client remain consistent.
+Local ArgoCD admin login remains enabled as a break-glass path.
+
 ## Creation Order
 
 Resources are created as their dependencies become ready:
@@ -232,6 +274,13 @@ The Usage ensures ArgoCD CRDs stay alive until all ArgoCD Application CRs are cl
 | `argocd.namespace` | string | no | `namespace` | Per-component namespace override |
 | `argocd.values` | object | no | `{}` | Helm values merged with defaults |
 | `argocd.overrideAllValues` | object | no | — | Helm values replacing all defaults |
+| `exposure.enabled` | boolean | no | `false` | Create an ArgoCD HTTPRoute |
+| `exposure.hostname` | string | with exposure | — | Public ArgoCD hostname |
+| `exposure.gatewayRef.*` | object | no | `platform` / `istio-ingress` / `https` | Existing Gateway listener |
+| `auth.oidc.enabled` | boolean | no | `false` | Enable native ArgoCD OIDC with Zitadel |
+| `auth.oidc.issuerURL` | string | with OIDC | — | Zitadel issuer URL |
+| `auth.oidc.rbac.adminEmails` | []string | no | `[]` | Explicit email-to-admin mappings |
+| `auth.oidc.zitadel.awsSecretsManagerPath` | string | with OIDC | — | AuthStack-published PAT path |
 | `repository.org` | string | yes | — | GitHub organization |
 | `repository.name` | string | no | `{clusterName}-gitops` | Repository name |
 | `repository.externalName` | string | no | — | Existing repository name to import instead of creating a new repository |
