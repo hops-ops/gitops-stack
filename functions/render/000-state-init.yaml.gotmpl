@@ -85,6 +85,14 @@
 {{- $repoOrg := $repoSpec.org }}
 {{- $repoName := $repoSpec.name | default (printf "%s-gitops" $clusterName) }}
 {{- $repoUrl := printf "https://github.com/%s/%s.git" $repoOrg $repoName }}
+{{- $repoAutoInit := true }}
+{{- if hasKey $repoSpec "autoInit" }}
+  {{- $repoAutoInit = $repoSpec.autoInit }}
+{{- end }}
+{{- $repoDeleteBranchOnMerge := true }}
+{{- if hasKey $repoSpec "deleteBranchOnMerge" }}
+  {{- $repoDeleteBranchOnMerge = $repoSpec.deleteBranchOnMerge }}
+{{- end }}
 
 # Template config (optional)
 {{- $repoTemplate := $repoSpec.template | default dict }}
@@ -102,6 +110,10 @@
 {{- $appsSpec := $spec.applications | default dict }}
 {{- $appsAppsSpec := $appsSpec.apps | default dict }}
 {{- $crossplaneSpec := $appsSpec.crossplane | default dict }}
+{{- $appsAppsEnabled := true }}
+{{- if hasKey $appsAppsSpec "enabled" }}
+  {{- $appsAppsEnabled = $appsAppsSpec.enabled }}
+{{- end }}
 
 # ==============================================================================
 # Initialize $state
@@ -140,9 +152,9 @@
     "description" ($repoSpec.description | default (printf "GitOps repository for %s cluster" $clusterName))
     "visibility" ($repoSpec.visibility | default "private")
     "template" $repoTemplate
-    "autoInit" ($repoSpec.autoInit | default true)
+    "autoInit" $repoAutoInit
     "topics" ($repoSpec.topics | default list)
-    "deleteBranchOnMerge" ($repoSpec.deleteBranchOnMerge | default true)
+    "deleteBranchOnMerge" $repoDeleteBranchOnMerge
     "allowDelete" ($repoSpec.allowDelete | default false)
     "url" $repoUrl
   )
@@ -163,7 +175,7 @@
   )
   "applications" (dict
     "apps" (dict
-      "enabled" ($appsAppsSpec.enabled | default true)
+      "enabled" $appsAppsEnabled
       "path" ($appsAppsSpec.path | default "apps")
     )
     "crossplane" (dict
