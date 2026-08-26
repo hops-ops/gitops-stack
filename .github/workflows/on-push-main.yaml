@@ -34,7 +34,9 @@ jobs:
           { "example": "examples/gitopsstacks/eso.yaml" },
           { "example": "examples/gitopsstacks/eso.yaml", "observed_resources": "examples/test/mocks/observed-resources/eso/steps/1/" },
           { "example": "examples/gitopsstacks/eso.yaml", "observed_resources": "examples/test/mocks/observed-resources/eso/steps/2/" },
-          { "example": "examples/gitopsstacks/eso.yaml", "observed_resources": "examples/test/mocks/observed-resources/eso/steps/3/" }
+          { "example": "examples/gitopsstacks/eso.yaml", "observed_resources": "examples/test/mocks/observed-resources/eso/steps/3/" },
+          { "example": "examples/gitopsstacks/zitadel-oidc.yaml" },
+          { "example": "examples/gitopsstacks/zitadel-oidc.yaml", "observed_resources": "examples/test/mocks/observed-resources/zitadel-oidc/steps/1/" }
         ]
       api_path: apis/gitopsstacks
       error_on_missing_schemas: true

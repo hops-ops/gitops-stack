@@ -1,0 +1,31 @@
+apiVersion: hops.ops.com.ai/v1alpha1
+kind: GitopsStack
+metadata:
+  name: gitops
+  namespace: example-env
+spec:
+  clusterName: example-cluster
+  labels:
+    team: platform
+  repository:
+    org: hops-ops
+    name: example-cluster-gitops
+  exposure:
+    enabled: true
+    hostname: argocd.example.com
+    gatewayRef:
+      name: platform
+      namespace: istio-ingress
+      sectionName: https
+  auth:
+    oidc:
+      enabled: true
+      issuerURL: https://auth.example.com
+      rbac:
+        adminEmails:
+        - platform-admin@example.com
+      zitadel:
+        awsSecretsManagerPath: push/example-cluster/zitadel-credentials
+  applications:
+    apps:
+      enabled: true

@@ -125,6 +125,94 @@ spec:
                     description: Helm values that replace all defaults.
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+              exposure:
+                description: Optional public exposure of the ArgoCD server through an existing Gateway API Gateway.
+                type: object
+                properties:
+                  enabled:
+                    description: Enable an HTTPRoute for the ArgoCD server. Defaults to false.
+                    type: boolean
+                    default: false
+                  hostname:
+                    description: Public DNS hostname for ArgoCD.
+                    type: string
+                    minLength: 1
+                  gatewayRef:
+                    description: Existing Gateway listener that accepts the ArgoCD HTTPRoute.
+                    type: object
+                    properties:
+                      name:
+                        description: Gateway name. Defaults to platform.
+                        type: string
+                      namespace:
+                        description: Gateway namespace. Defaults to istio-ingress.
+                        type: string
+                      sectionName:
+                        description: Gateway listener section name. Defaults to https.
+                        type: string
+                x-kubernetes-validations:
+                - rule: "!self.enabled || has(self.hostname)"
+                  message: spec.exposure.hostname is required when exposure is enabled
+              auth:
+                description: Authentication configuration for ArgoCD.
+                type: object
+                properties:
+                  oidc:
+                    description: Native ArgoCD OIDC backed by a Zitadel application managed in the target cluster.
+                    type: object
+                    properties:
+                      enabled:
+                        description: Enable native ArgoCD OIDC with Zitadel. Defaults to false.
+                        type: boolean
+                        default: false
+                      name:
+                        description: Identity provider display name. Defaults to Zitadel.
+                        type: string
+                      issuerURL:
+                        description: Public Zitadel OIDC issuer URL.
+                        type: string
+                        pattern: ^https://
+                      requestedScopes:
+                        description: OIDC scopes requested by ArgoCD. Defaults to openid, profile, and email.
+                        type: array
+                        minItems: 1
+                        items:
+                          type: string
+                      rbac:
+                        description: Minimal ArgoCD RBAC mappings for OIDC identities.
+                        type: object
+                        properties:
+                          adminEmails:
+                            description: Email addresses explicitly mapped to ArgoCD's built-in admin role.
+                            type: array
+                            items:
+                              type: string
+                              format: email
+                      zitadel:
+                        description: Zitadel management inputs used to create the Project and OIDC application.
+                        type: object
+                        properties:
+                          awsSecretsManagerPath:
+                            description: AWS Secrets Manager path containing the AuthStack access token.
+                            type: string
+                            minLength: 1
+                          accessTokenProperty:
+                            description: JSON property containing the access token. Defaults to access_token.
+                            type: string
+                          secretStoreName:
+                            description: ClusterSecretStore used to read the access token. Defaults to default.
+                            type: string
+                          projectName:
+                            description: Zitadel Project name. Defaults to {clusterName}-argocd.
+                            type: string
+                          applicationName:
+                            description: Zitadel OIDC application name. Defaults to {clusterName}-argocd.
+                            type: string
+                        required:
+                        - awsSecretsManagerPath
+                    x-kubernetes-validations:
+                    - rule: "!self.enabled || (has(self.issuerURL) && has(self.zitadel))"
+                      message: spec.auth.oidc.issuerURL and spec.auth.oidc.zitadel are required when OIDC is enabled
               repository:
                 description: Configuration for the GitOps GitHub repository.
                 type: object
@@ -241,6 +329,9 @@ spec:
                         type: boolean
             required:
             - clusterName
+            x-kubernetes-validations:
+            - rule: "!has(self.auth) || !has(self.auth.oidc) || !self.auth.oidc.enabled || (has(self.exposure) && self.exposure.enabled)"
+              message: spec.exposure.enabled must be true when native OIDC is enabled
           status:
             description: GitopsStackStatus defines the observed state.
             type: object
@@ -254,6 +345,13 @@ spec:
                 properties:
                   url:
                     description: Full URL of the gitops repository.
+                    type: string
+              oidc:
+                description: Observed ArgoCD OIDC client state.
+                type: object
+                properties:
+                  clientId:
+                    description: Zitadel client ID observed from the managed OIDC application.
                     type: string
         required:
         - spec

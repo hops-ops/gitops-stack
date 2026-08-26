@@ -11,7 +11,7 @@
 
 {{- $checkReady := dict }}
 {{- $checkExists := dict }}
-{{- range $key := list "nodepool-gitops" "helm-release-argocd" "github-repository" "argocd-apps" "crossplane-app" "external-secret-argocd-repo-creds" }}
+{{- range $key := list "nodepool-gitops" "helm-release-argocd" "github-repository" "argocd-apps" "crossplane-app" "external-secret-argocd-repo-creds" "zitadel-credentials" "zitadel-provider-config" "zitadel-project" "zitadel-oidc-client" "zitadel-client-secret" }}
   {{- $entry := get $observed $key | default dict }}
   {{- $resource := $entry.resource | default dict }}
   {{- $status := $resource.status | default dict }}
@@ -24,6 +24,12 @@
   {{- $checkReady = set $checkReady $key $ready }}
   {{- $checkExists = set $checkExists $key (gt (len $resource) 0) }}
 {{- end }}
+
+# Extract the generated Zitadel client ID from the target OIDC resource
+# observed through provider-kubernetes Object status.
+{{- $oidcEntry := get $observed "zitadel-oidc-client" | default dict }}
+{{- $oidcManifest := dig "resource" "status" "atProvider" "manifest" dict $oidcEntry }}
+{{- $oidcClientId := dig "status" "atProvider" "id" "" $oidcManifest }}
 
 # Extract repository URL from observed state
 {{- $repoEntry := get $observed "github-repository" | default dict }}
@@ -65,6 +71,14 @@
     "ready" (get $checkReady "crossplane-app")
     "exists" (get $checkExists "crossplane-app")
   )
+  "zitadel" (dict
+    "credentialsReady" (get $checkReady "zitadel-credentials")
+    "providerConfigReady" (get $checkReady "zitadel-provider-config")
+    "projectReady" (get $checkReady "zitadel-project")
+    "oidcReady" (get $checkReady "zitadel-oidc-client")
+    "clientSecretReady" (get $checkReady "zitadel-client-secret")
+    "clientId" $oidcClientId
+  )
 ) }}
 
 # ==============================================================================
@@ -84,10 +98,23 @@
 {{- if $state.applications.crossplane.enabled }}
   {{- $ready = and $ready $state.observed.crossplaneApp.ready }}
 {{- end }}
+{{- if $state.auth.oidc.enabled }}
+  {{- $ready = and
+    $ready
+    $state.observed.zitadel.credentialsReady
+    $state.observed.zitadel.providerConfigReady
+    $state.observed.zitadel.projectReady
+    $state.observed.zitadel.oidcReady
+    $state.observed.zitadel.clientSecretReady
+  }}
+{{- end }}
 
 {{- $state = set $state "status" (dict
   "ready" $ready
   "repository" (dict
     "url" $repoUrl
+  )
+  "oidc" (dict
+    "clientId" $oidcClientId
   )
 ) }}
