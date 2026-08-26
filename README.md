@@ -234,6 +234,7 @@ The Usage ensures ArgoCD CRDs stay alive until all ArgoCD Application CRs are cl
 | `argocd.overrideAllValues` | object | no | — | Helm values replacing all defaults |
 | `repository.org` | string | yes | — | GitHub organization |
 | `repository.name` | string | no | `{clusterName}-gitops` | Repository name |
+| `repository.externalName` | string | no | — | Existing repository name to import instead of creating a new repository |
 | `repository.description` | string | no | auto-generated | Repository description |
 | `repository.visibility` | string | no | `private` | `public`, `private`, or `internal` |
 | `repository.autoInit` | boolean | no | `true` | Create initial commit (ignored when template is set) |
@@ -241,6 +242,9 @@ The Usage ensures ArgoCD CRDs stay alive until all ArgoCD Application CRs are cl
 | `repository.template.repository` | string | no | — | Template repo name |
 | `repository.topics` | []string | no | `[]` | Repository topics |
 | `repository.deleteBranchOnMerge` | boolean | no | `true` | Auto-delete head branches on merge |
+| `externalSecrets.githubToken.secretPath` | string | no | — | AWS Secrets Manager secret containing a GitHub token |
+| `externalSecrets.githubToken.tokenKey` | string | no | `token` | JSON key containing the token |
+| `externalSecrets.githubToken.username` | string | no | `x-access-token` | HTTPS username for ArgoCD repository credentials |
 | `applications.apps.enabled` | boolean | no | `true` | Deploy the root app-of-apps Application |
 | `applications.apps.path` | string | no | `apps` | Path in repo to sync |
 | `applications.crossplane.enabled` | boolean | no | `false` | Deploy Crossplane integration apps |
@@ -262,7 +266,7 @@ global:
 | Field | Type | Description |
 |-------|------|-------------|
 | `status.ready` | boolean | `true` when all composed resources report Ready |
-| `status.repository.url` | string | Full URL of the created GitHub repository |
+| `status.repository.url` | string | Full URL of the managed GitHub repository |
 
 ## Dependencies
 

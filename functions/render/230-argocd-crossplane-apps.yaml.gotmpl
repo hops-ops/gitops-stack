@@ -12,10 +12,10 @@
 
 {{- $repoCredsReady := true }}
 {{- if $state.externalSecrets.enabled }}
-  {{- $repoCredsReady = $obs.repoCreds.ready }}
+  {{- $repoCredsReady = or $obs.repoCreds.ready $obs.crossplaneApp.exists }}
 {{- end }}
 
-{{- if and $apps.crossplane.enabled $obs.argocd.ready $repoCredsReady }}
+{{- if and $apps.crossplane.enabled (or $obs.argocd.ready $obs.crossplaneApp.exists) $repoCredsReady }}
 ---
 apiVersion: kubernetes.m.crossplane.io/v1alpha1
 kind: Object

@@ -10,7 +10,8 @@
 # ==============================================================================
 
 {{- $checkReady := dict }}
-{{- range $key := list "helm-release-argocd" "github-repository" "argocd-apps" "crossplane-app" "external-secret-argocd-repo-creds" }}
+{{- $checkExists := dict }}
+{{- range $key := list "nodepool-gitops" "helm-release-argocd" "github-repository" "argocd-apps" "crossplane-app" "external-secret-argocd-repo-creds" }}
   {{- $entry := get $observed $key | default dict }}
   {{- $resource := $entry.resource | default dict }}
   {{- $status := $resource.status | default dict }}
@@ -21,6 +22,7 @@
     {{- end }}
   {{- end }}
   {{- $checkReady = set $checkReady $key $ready }}
+  {{- $checkExists = set $checkExists $key (gt (len $resource) 0) }}
 {{- end }}
 
 # Extract repository URL from observed state
@@ -38,23 +40,53 @@
 # Set observed state
 # ==============================================================================
 {{- $state = set $state "observed" (dict
-  "argocd" (dict "ready" (get $checkReady "helm-release-argocd"))
+  "nodePool" (dict
+    "ready" (get $checkReady "nodepool-gitops")
+    "exists" (get $checkExists "nodepool-gitops")
+  )
+  "argocd" (dict
+    "ready" (get $checkReady "helm-release-argocd")
+    "exists" (get $checkExists "helm-release-argocd")
+  )
   "repository" (dict
     "ready" (get $checkReady "github-repository")
+    "exists" (get $checkExists "github-repository")
     "url" $observedRepoUrl
   )
-  "repoCreds" (dict "ready" (get $checkReady "external-secret-argocd-repo-creds"))
-  "appsApp" (dict "ready" (get $checkReady "argocd-apps"))
-  "crossplaneApp" (dict "ready" (get $checkReady "crossplane-app"))
+  "repoCreds" (dict
+    "ready" (get $checkReady "external-secret-argocd-repo-creds")
+    "exists" (get $checkExists "external-secret-argocd-repo-creds")
+  )
+  "appsApp" (dict
+    "ready" (get $checkReady "argocd-apps")
+    "exists" (get $checkExists "argocd-apps")
+  )
+  "crossplaneApp" (dict
+    "ready" (get $checkReady "crossplane-app")
+    "exists" (get $checkExists "crossplane-app")
+  )
 ) }}
 
 # ==============================================================================
 # Compute status (readiness determined by function-auto-ready)
 # ==============================================================================
 {{- $repoUrl := $state.observed.repository.url | default $state.repository.url }}
+{{- $ready := and $state.observed.argocd.ready $state.observed.repository.ready }}
+{{- if $state.nodePool.enabled }}
+  {{- $ready = and $ready $state.observed.nodePool.ready }}
+{{- end }}
+{{- if $state.externalSecrets.enabled }}
+  {{- $ready = and $ready $state.observed.repoCreds.ready }}
+{{- end }}
+{{- if $state.applications.apps.enabled }}
+  {{- $ready = and $ready $state.observed.appsApp.ready }}
+{{- end }}
+{{- if $state.applications.crossplane.enabled }}
+  {{- $ready = and $ready $state.observed.crossplaneApp.ready }}
+{{- end }}
 
 {{- $state = set $state "status" (dict
-  "ready" false
+  "ready" $ready
   "repository" (dict
     "url" $repoUrl
   )
