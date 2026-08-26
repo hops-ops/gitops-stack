@@ -43,6 +43,25 @@ _argocdReady = [
     }
 ]
 
+_zitadelOidcReady = [
+    {
+        apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+        kind = "Object"
+        metadata = {
+            name = "placeholder-zitadel-oidc"
+            namespace = "default"
+            annotations = {"crossplane.io/composition-resource-name" = "zitadel-oidc-client"}
+        }
+        status = {
+            conditions = [
+                {type = "Ready", status = "True"}
+                {type = "Synced", status = "True"}
+            ]
+            atProvider.manifest.status.atProvider.id = "330000000000000001"
+        }
+    }
+]
+
 _items = [
     # ==========================================================================
     # Test 1: Minimal input renders ArgoCD Release + GitHub Repository
@@ -826,6 +845,129 @@ _items = [
                     apiVersion = "protection.crossplane.io/v1beta1"
                     kind = "Usage"
                     metadata.name = "nodepool-test-delete-argocd-before-nodepool"
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 19: Gateway exposure and Zitadel OIDC render target-cluster resources
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "gateway-and-zitadel-oidc"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = stacksv1alpha1.GitopsStack {
+                metadata.name = "sso-test"
+                spec = {
+                    clusterName = "test-cluster"
+                    repository.org = "hops-ops"
+                    exposure = {
+                        enabled = True
+                        hostname = "argocd.example.com"
+                        gatewayRef = {
+                            name = "platform"
+                            namespace = "istio-ingress"
+                            sectionName = "https"
+                        }
+                    }
+                    auth.oidc = {
+                        enabled = True
+                        issuerURL = "https://auth.example.com"
+                        rbac.adminEmails = ["admin@example.com"]
+                        zitadel.awsSecretsManagerPath = "push/test/zitadel-credentials"
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "argocd"
+                    spec.forProvider.values = {
+                        global.domain = "argocd.example.com"
+                        configs.cm.url = "https://argocd.example.com"
+                        configs.params = {"server.insecure" = "true"}
+                        server.httproute = {
+                            enabled = True
+                            hostnames = ["argocd.example.com"]
+                            parentRefs = [{name = "platform", namespace = "istio-ingress", sectionName = "https"}]
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "sso-test-zitadel-project"
+                    spec.readiness.policy = "DeriveFromObject"
+                    spec.forProvider.manifest.spec.forProvider.name = "test-cluster-argocd"
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "sso-test-zitadel-oidc-client"
+                    spec.readiness.policy = "DeriveFromObject"
+                    spec.forProvider.manifest.spec.forProvider = {
+                        projectIdRef.name = "sso-test-argocd"
+                        redirectUris = ["https://argocd.example.com/auth/callback"]
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 20: Observed Zitadel client ID activates native ArgoCD OIDC config
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "observed-zitadel-client-configures-argocd"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = stacksv1alpha1.GitopsStack {
+                metadata.name = "sso-observed"
+                spec = {
+                    clusterName = "test-cluster"
+                    repository.org = "hops-ops"
+                    exposure = {enabled = True, hostname = "argocd.example.com"}
+                    auth.oidc = {
+                        enabled = True
+                        issuerURL = "https://auth.example.com"
+                        rbac.adminEmails = ["admin@example.com"]
+                        zitadel.awsSecretsManagerPath = "push/test/zitadel-credentials"
+                    }
+                }
+            }
+            observedResources = _zitadelOidcReady
+            assertResources = [
+                {
+                    apiVersion = "hops.ops.com.ai/v1alpha1"
+                    kind = "GitopsStack"
+                    metadata.name = "sso-observed"
+                    status.oidc.clientId = "330000000000000001"
+                }
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "argocd"
+                    spec.forProvider.values.configs.rbac = {
+                        "policy.csv" = "g, admin@example.com, role:admin"
+                        scopes = "[email]"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "sso-observed-zitadel-client-secret"
+                    spec = {
+                        managementPolicies = ["Observe", "Update"]
+                        forProvider.manifest.metadata.labels = {"app.kubernetes.io/part-of" = "argocd"}
+                    }
                 }
             ]
         }

@@ -1,0 +1,21 @@
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: gitops-zitadel-oidc-client
+  namespace: example-env
+  annotations:
+    crossplane.io/composition-resource-name: zitadel-oidc-client
+    gotemplating.fn.crossplane.io/composition-resource-name: zitadel-oidc-client
+status:
+  conditions:
+  - type: Ready
+    status: "True"
+  - type: Synced
+    status: "True"
+  atProvider:
+    manifest:
+      apiVersion: application.zitadel.m.crossplane.io/v1alpha1
+      kind: Oidc
+      status:
+        atProvider:
+          id: "330000000000000001"
