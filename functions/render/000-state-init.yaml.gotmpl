@@ -94,6 +94,7 @@
 # ==============================================================================
 {{- $esoSpec := $spec.externalSecrets | default dict }}
 {{- $ghAppSpec := $esoSpec.githubApp | default dict }}
+{{- $ghTokenSpec := $esoSpec.githubToken | default dict }}
 
 # ==============================================================================
 # Applications configuration
@@ -135,6 +136,7 @@
   "repository" (dict
     "org" $repoOrg
     "name" $repoName
+    "externalName" ($repoSpec.externalName | default "")
     "description" ($repoSpec.description | default (printf "GitOps repository for %s cluster" $clusterName))
     "visibility" ($repoSpec.visibility | default "private")
     "template" $repoTemplate
@@ -152,6 +154,11 @@
       "appIdKey" ($ghAppSpec.appIdKey | default "appId")
       "installationIdKey" ($ghAppSpec.installationIdKey | default "")
       "privateKeyKey" ($ghAppSpec.privateKeyKey | default "privateKey")
+    )
+    "githubToken" (dict
+      "secretPath" ($ghTokenSpec.secretPath | default "")
+      "tokenKey" ($ghTokenSpec.tokenKey | default "token")
+      "username" ($ghTokenSpec.username | default "x-access-token")
     )
   )
   "applications" (dict

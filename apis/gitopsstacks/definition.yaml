@@ -135,6 +135,9 @@ spec:
                   name:
                     description: Repository name. Defaults to {clusterName}-gitops.
                     type: string
+                  externalName:
+                    description: Existing GitHub repository name to import instead of creating a new repository.
+                    type: string
                   description:
                     description: Repository description.
                     type: string
@@ -177,7 +180,7 @@ spec:
                 type: object
                 properties:
                   enabled:
-                    description: Enable ESO integration. Creates an ExternalSecret to pull GitHub App credentials from AWS Secrets Manager into ArgoCD repo-creds.
+                    description: Enable ESO integration. Creates an ExternalSecret to pull GitHub App or token credentials from AWS Secrets Manager into ArgoCD repo-creds.
                     type: boolean
                   secretStoreName:
                     description: Name of the ClusterSecretStore created by SecretStack. Defaults to "default".
@@ -197,6 +200,21 @@ spec:
                         type: string
                       privateKeyKey:
                         description: JSON key for the GitHub App private key within the secret. Defaults to "privateKey".
+                        type: string
+                    required:
+                    - secretPath
+                  githubToken:
+                    description: GitHub token credential reference in AWS Secrets Manager. Used instead of githubApp when configured.
+                    type: object
+                    properties:
+                      secretPath:
+                        description: AWS Secrets Manager secret name containing the GitHub token.
+                        type: string
+                      tokenKey:
+                        description: JSON key for the GitHub token within the secret. Defaults to "token".
+                        type: string
+                      username:
+                        description: HTTPS username written to the ArgoCD repo-creds Secret. Defaults to "x-access-token".
                         type: string
                     required:
                     - secretPath

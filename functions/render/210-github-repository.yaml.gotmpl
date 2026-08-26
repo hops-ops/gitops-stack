@@ -12,6 +12,9 @@ metadata:
   name: {{ $repo.name }}
   annotations:
     {{ setResourceNameAnnotation "github-repository" }}
+    {{- if $repo.externalName }}
+    crossplane.io/external-name: {{ $repo.externalName }}
+    {{- end }}
   labels: {{ $state.labels | toJson }}
 spec:
   {{- if $repo.allowDelete }}
