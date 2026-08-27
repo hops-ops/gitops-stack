@@ -171,7 +171,7 @@ spec:
                       issuerURL:
                         description: Public Zitadel OIDC issuer URL.
                         type: string
-                        pattern: ^https://
+                        pattern: '^https://[^/?#[:space:]]+(?:[/?#].*)?$'
                       requestedScopes:
                         description: OIDC scopes requested by ArgoCD. Defaults to openid, profile, and email.
                         type: array
