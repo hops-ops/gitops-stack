@@ -55,7 +55,7 @@ spec:
     name: {{ $state.kubernetesProviderConfigRef.name }}
     kind: {{ $state.kubernetesProviderConfigRef.kind }}
 
-{{- if $obs.argocd.ready }}
+{{- if or $obs.argocd.ready $obs.appsApp.exists }}
 ---
 apiVersion: protection.crossplane.io/v1beta1
 kind: Usage

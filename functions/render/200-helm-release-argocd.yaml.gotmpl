@@ -129,9 +129,13 @@ spec:
         {{- if $existingPolicy }}
           {{- $adminPolicy = printf "%s\n%s" $existingPolicy $adminPolicy }}
         {{- end }}
+        {{- $existingScopes := dig "configs" "rbac" "scopes" "[groups]" $effectiveValues | fromYaml | default list }}
+        {{- if not (has "email" $existingScopes) }}
+          {{- $existingScopes = append $existingScopes "email" }}
+        {{- end }}
         {{- $oidcValues = mergeOverwrite $oidcValues (dict "configs" (dict "rbac" (dict
           "policy.csv" $adminPolicy
-          "scopes" "[email]"
+          "scopes" ($existingScopes | toJson)
         ))) }}
       {{- end }}
 
