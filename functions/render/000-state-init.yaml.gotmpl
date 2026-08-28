@@ -13,7 +13,10 @@
 {{- $name := $metadata.name | default "gitops" }}
 {{- $clusterName := $spec.clusterName | default $name }}
 {{- $namespace := $spec.namespace | default "argocd" }}
-{{- $managementPolicies := $spec.managementPolicies | default (list "*") }}
+{{- $managementPolicies := list "*" }}
+{{- if hasKey $spec "managementPolicies" }}
+  {{- $managementPolicies = get $spec "managementPolicies" }}
+{{- end }}
 {{- $nonDeletingManagementPolicies := list }}
 {{- if has "*" $managementPolicies }}
   {{- $nonDeletingManagementPolicies = list "Observe" "Create" "Update" "LateInitialize" }}

@@ -108,6 +108,41 @@ _items = [
     }
 
     # ==========================================================================
+    # Test 1c: An explicit empty policy list stays empty
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "empty-management-policies-stay-empty"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = stacksv1alpha1.GitopsStack {
+                metadata.name = "no-authority"
+                spec = {
+                    clusterName = "test-cluster"
+                    managementPolicies = []
+                    repository.org = "hops-ops"
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "argocd"
+                    spec.managementPolicies = []
+                }
+                {
+                    apiVersion = "repo.github.m.upbound.io/v1alpha1"
+                    kind = "Repository"
+                    metadata.name = "test-cluster-gitops"
+                    spec.managementPolicies = []
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
     # Test 2: Custom labels merged with defaults
     # ==========================================================================
     metav1alpha1.CompositionTest {
