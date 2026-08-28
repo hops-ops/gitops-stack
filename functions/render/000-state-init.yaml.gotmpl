@@ -14,6 +14,22 @@
 {{- $clusterName := $spec.clusterName | default $name }}
 {{- $namespace := $spec.namespace | default "argocd" }}
 {{- $managementPolicies := $spec.managementPolicies | default (list "*") }}
+{{- $nonDeletingManagementPolicies := list }}
+{{- if has "*" $managementPolicies }}
+  {{- $nonDeletingManagementPolicies = list "Observe" "Create" "Update" "LateInitialize" }}
+{{- else }}
+  {{- range $policy := $managementPolicies }}
+    {{- if ne $policy "Delete" }}
+      {{- $nonDeletingManagementPolicies = append $nonDeletingManagementPolicies $policy }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- $observeUpdateManagementPolicies := list }}
+{{- range $policy := list "Observe" "Update" }}
+  {{- if or (has "*" $managementPolicies) (has $policy $managementPolicies) }}
+    {{- $observeUpdateManagementPolicies = append $observeUpdateManagementPolicies $policy }}
+  {{- end }}
+{{- end }}
 
 # Labels
 {{- $defaultLabels := dict
@@ -163,6 +179,8 @@
   "clusterName" $clusterName
   "namespace" $namespace
   "managementPolicies" $managementPolicies
+  "nonDeletingManagementPolicies" $nonDeletingManagementPolicies
+  "observeUpdateManagementPolicies" $observeUpdateManagementPolicies
   "labels" $labels
   "helmProviderConfigRef" $helmProviderConfigRef
   "kubernetesProviderConfigRef" $k8sProviderConfigRef

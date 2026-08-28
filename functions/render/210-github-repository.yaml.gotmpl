@@ -20,7 +20,7 @@ spec:
   {{- if $repo.allowDelete }}
   managementPolicies: {{ $state.managementPolicies | toJson }}
   {{- else }}
-  managementPolicies: ["Observe", "Create", "Update", "LateInitialize"]
+  managementPolicies: {{ $state.nonDeletingManagementPolicies | toJson }}
   {{- end }}
   forProvider:
     name: {{ $repo.name }}
