@@ -79,6 +79,35 @@ _items = [
     }
 
     # ==========================================================================
+    # Test 1b: Restricted parent policies never expand on the protected repo
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "observe-only-repository-stays-observe-only"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = stacksv1alpha1.GitopsStack {
+                metadata.name = "observe-only"
+                spec = {
+                    clusterName = "test-cluster"
+                    managementPolicies = ["Observe", "LateInitialize"]
+                    repository.org = "hops-ops"
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "repo.github.m.upbound.io/v1alpha1"
+                    kind = "Repository"
+                    metadata.name = "test-cluster-gitops"
+                    spec.managementPolicies = ["Observe", "LateInitialize"]
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
     # Test 2: Custom labels merged with defaults
     # ==========================================================================
     metav1alpha1.CompositionTest {
