@@ -321,10 +321,10 @@ global:
 
 | Kind | Package | Version |
 |------|---------|---------|
-| Function | crossplane-contrib/function-auto-ready | >=v0.6.1 |
-| Provider | crossplane-contrib/provider-helm | >=v1 |
-| Provider | crossplane-contrib/provider-kubernetes | >=v1 |
-| Provider | crossplane-contrib/provider-upjet-github | >=v0.19.0 |
+| Function | crossplane-contrib/function-auto-ready | >=v0 <v1 |
+| Provider | crossplane-contrib/provider-helm | >=v1 <v2 |
+| Provider | crossplane-contrib/provider-kubernetes | >=v1 <v2 |
+| Provider | crossplane-contrib/provider-upjet-github | >=v0 <v1 |
 
 ## Development
 
