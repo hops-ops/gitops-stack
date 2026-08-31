@@ -1,0 +1,23 @@
+apiVersion: hops.ops.com.ai/v1alpha1
+kind: GitopsStack
+metadata:
+  name: gitops
+  namespace: example-env
+spec:
+  clusterName: example-cluster
+  exposure:
+    enabled: true
+    hostname: argocd.example.com
+    gatewayRef:
+      name: platform
+      namespace: istio-ingress
+      sectionName: https
+  repository:
+    org: hops-ops
+    name: example-cluster-gitops
+    webhook:
+      enabled: true
+      secretStoreName: default
+      secretPath: github/argocd-webhook
+      secretKey: webhookSecret
+      maxPayloadSizeMB: 10

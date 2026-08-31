@@ -9,6 +9,7 @@ A single Crossplane resource that provisions a complete GitOps foundation: ArgoC
 - ArgoCD Applications referencing wrong repo URLs or paths after copy-paste
 - Deleting ArgoCD before its Applications causes orphaned resources and finalizer deadlocks
 - GitHub repo creation is a manual, out-of-band process with inconsistent naming/settings
+- Git pushes wait for ArgoCD's polling interval before applications refresh
 - No single source of truth for "what GitOps infrastructure does this cluster have?"
 
 **With GitOps Stack:**
@@ -16,6 +17,7 @@ A single Crossplane resource that provisions a complete GitOps foundation: ArgoC
 - Repo URL derived from org + cluster name — rename the cluster and everything adjusts
 - Safe deletion ordering enforced via Usage resources (projects app deletes before ArgoCD)
 - GitHub repo created with consistent settings (topics, visibility, branch cleanup, templates)
+- Optional signed GitHub webhook refreshes ArgoCD immediately after pushes
 - Optional Crossplane integration deploys configurations and provider configs via ArgoCD
 
 ## What Gets Deployed
@@ -51,6 +53,8 @@ client Secret.
 |----------|------|---------|
 | ArgoCD | Helm Release (`argo-cd` v9.7.1) | Continuous delivery platform |
 | GitHub Repository | `repo.github.m.upbound.io` | GitOps source repository |
+| GitHub Repository Webhook | `repo.github.m.upbound.io` | Sends signed push events to ArgoCD |
+| Webhook ExternalSecrets | Kubernetes Objects | Projects one AWS Secrets Manager value to GitHub and ArgoCD |
 | Projects Application | Kubernetes Object (ArgoCD Application) | Syncs ArgoCD projects from the repo |
 | Deletion Usage | Usage | Ensures projects app deletes before ArgoCD |
 | Crossplane AppProject | Kubernetes Object (ArgoCD AppProject) | Scoped ArgoCD project for Crossplane |
@@ -112,6 +116,31 @@ spec:
 ```
 
 When `template` is set, the repo is created from the template instead of auto-init.
+
+#### Immediate refresh after GitHub pushes
+
+Enable the native ArgoCD webhook to replace its polling delay with push-driven
+refreshes. The secret value remains in AWS Secrets Manager; the Helm Release
+stores only a reference to the External Secrets-managed Kubernetes Secret.
+
+```yaml
+spec:
+  exposure:
+    enabled: true
+    hostname: argocd.example.com
+  repository:
+    org: hops-ops
+    webhook:
+      enabled: true
+      secretStoreName: default
+      secretPath: github/argocd-webhook
+      secretKey: webhookSecret
+      maxPayloadSizeMB: 10
+```
+
+This creates a GitHub `push` webhook for
+`https://argocd.example.com/api/webhook`. SecretStack and a public ArgoCD
+Gateway route are required.
 
 ### Stage 3: Crossplane Integration
 
@@ -291,6 +320,11 @@ The Usage ensures ArgoCD CRDs stay alive until all ArgoCD Application CRs are cl
 | `repository.template.repository` | string | no | — | Template repo name |
 | `repository.topics` | []string | no | `[]` | Repository topics |
 | `repository.deleteBranchOnMerge` | boolean | no | `true` | Auto-delete head branches on merge |
+| `repository.webhook.enabled` | boolean | no | `false` | Create a signed GitHub push webhook for immediate ArgoCD refreshes |
+| `repository.webhook.secretStoreName` | string | no | `externalSecrets.secretStoreName` or `default` | ClusterSecretStore containing the shared secret |
+| `repository.webhook.secretPath` | string | when enabled | — | AWS Secrets Manager path containing the shared secret |
+| `repository.webhook.secretKey` | string | no | `webhookSecret` | JSON property containing the shared secret |
+| `repository.webhook.maxPayloadSizeMB` | integer | no | `10` | Maximum webhook payload accepted by ArgoCD |
 | `externalSecrets.githubToken.secretPath` | string | no | — | AWS Secrets Manager secret containing a GitHub token |
 | `externalSecrets.githubToken.tokenKey` | string | no | `token` | JSON key containing the token |
 | `externalSecrets.githubToken.username` | string | no | `x-access-token` | HTTPS username for ArgoCD repository credentials |
@@ -332,7 +366,7 @@ global:
 make render          # Render all examples
 make render:minimal  # Render a single example
 make validate        # Validate all rendered output
-make test            # Run KCL unit tests (12 tests)
+make test            # Run KCL unit tests
 make e2e             # Run E2E tests (requires GitHub App credentials)
 make build           # Build the Crossplane package
 make publish tag=v1  # Build and push to registry

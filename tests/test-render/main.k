@@ -972,6 +972,117 @@ _items = [
             ]
         }
     }
+
+    # ==========================================================================
+    # Test 20: GitHub webhook maps one external secret to GitHub and ArgoCD
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "github-webhook-refreshes-argocd"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = stacksv1alpha1.GitopsStack {
+                metadata = {
+                    name = "webhook-test"
+                    namespace = "platform"
+                }
+                spec = {
+                    clusterName = "test-cluster"
+                    exposure = {
+                        enabled = True
+                        hostname = "argocd.example.com"
+                    }
+                    repository = {
+                        org = "hops-ops"
+                        name = "platform-gitops"
+                        webhook = {
+                            enabled = True
+                            secretStoreName = "aws-secrets"
+                            secretPath = "github/argocd-webhook"
+                            secretKey = "hook_secret"
+                            maxPayloadSizeMB = 8
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "argocd"
+                    spec.forProvider.values.configs = {
+                        cm = {"webhook.maxPayloadSizeMB" = "8"}
+                        secret.githubSecret = "$webhook-test-github-webhook:secret"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "webhook-test-github-webhook-secret"
+                    spec.forProvider.manifest = {
+                        apiVersion = "external-secrets.io/v1"
+                        kind = "ExternalSecret"
+                        metadata = {
+                            name = "webhook-test-github-webhook"
+                            namespace = "platform"
+                        }
+                        spec = {
+                            secretStoreRef = {
+                                name = "aws-secrets"
+                                kind = "ClusterSecretStore"
+                            }
+                            target.template.data.url = "https://argocd.example.com/api/webhook"
+                            data = [{
+                                secretKey = "webhookSecret"
+                                remoteRef = {
+                                    key = "github/argocd-webhook"
+                                    property = "hook_secret"
+                                }
+                            }]
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "webhook-test-argocd-webhook-secret"
+                    spec.forProvider.manifest.spec.target.template.metadata.labels = {
+                        "app.kubernetes.io/part-of" = "argocd"
+                    }
+                }
+                {
+                    apiVersion = "repo.github.m.upbound.io/v1alpha1"
+                    kind = "RepositoryWebhook"
+                    metadata.name = "platform-gitops"
+                    spec = {
+                        forProvider = {
+                            active = True
+                            events = ["push"]
+                            repositoryRef.name = "platform-gitops"
+                            configuration = [{
+                                contentType = "json"
+                                insecureSsl = False
+                                urlSecretRef = {
+                                    name = "webhook-test-github-webhook"
+                                    key = "url"
+                                }
+                                secretSecretRef = {
+                                    name = "webhook-test-github-webhook"
+                                    key = "secret"
+                                }
+                            }]
+                        }
+                        providerConfigRef = {
+                            name = "default"
+                            kind = "ProviderConfig"
+                        }
+                    }
+                }
+            ]
+        }
+    }
 ]
 
 items = _items

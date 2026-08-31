@@ -11,7 +11,7 @@
 
 {{- $checkReady := dict }}
 {{- $checkExists := dict }}
-{{- range $key := list "nodepool-gitops" "helm-release-argocd" "github-repository" "argocd-apps" "crossplane-app" "external-secret-argocd-repo-creds" "zitadel-credentials" "zitadel-provider-config" "zitadel-project" "zitadel-oidc-client" "zitadel-client-secret" }}
+{{- range $key := list "nodepool-gitops" "helm-release-argocd" "github-repository" "argocd-apps" "crossplane-app" "external-secret-argocd-repo-creds" "external-secret-github-webhook" "external-secret-argocd-webhook" "github-repository-webhook" "zitadel-credentials" "zitadel-provider-config" "zitadel-project" "zitadel-oidc-client" "zitadel-client-secret" }}
   {{- $entry := get $observed $key | default dict }}
   {{- $resource := $entry.resource | default dict }}
   {{- $status := $resource.status | default dict }}
@@ -69,6 +69,14 @@
     "ready" (get $checkReady "external-secret-argocd-repo-creds")
     "exists" (get $checkExists "external-secret-argocd-repo-creds")
   )
+  "webhook" (dict
+    "secretReady" (get $checkReady "external-secret-github-webhook")
+    "secretExists" (get $checkExists "external-secret-github-webhook")
+    "argocdSecretReady" (get $checkReady "external-secret-argocd-webhook")
+    "argocdSecretExists" (get $checkExists "external-secret-argocd-webhook")
+    "ready" (get $checkReady "github-repository-webhook")
+    "exists" (get $checkExists "github-repository-webhook")
+  )
   "appsApp" (dict
     "ready" (get $checkReady "argocd-apps")
     "exists" (get $checkExists "argocd-apps")
@@ -97,6 +105,14 @@
 {{- end }}
 {{- if $state.externalSecrets.enabled }}
   {{- $ready = and $ready $state.observed.repoCreds.ready }}
+{{- end }}
+{{- if $state.repository.webhook.enabled }}
+  {{- $ready = and
+    $ready
+    $state.observed.webhook.secretReady
+    $state.observed.webhook.argocdSecretReady
+    $state.observed.webhook.ready
+  }}
 {{- end }}
 {{- if $state.applications.apps.enabled }}
   {{- $ready = and $ready $state.observed.appsApp.ready }}

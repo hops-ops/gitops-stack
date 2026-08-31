@@ -261,6 +261,34 @@ spec:
                     description: Allow Crossplane to delete the repository when the XR is deleted. Defaults to false for safety.
                     type: boolean
                     default: false
+                  webhook:
+                    description: GitHub webhook that immediately refreshes ArgoCD Applications when the repository changes. Requires SecretStack and public ArgoCD exposure.
+                    type: object
+                    properties:
+                      enabled:
+                        description: Create a push webhook targeting the exposed ArgoCD server. Defaults to false.
+                        type: boolean
+                        default: false
+                      secretStoreName:
+                        description: ClusterSecretStore used to read the webhook secret. Defaults to externalSecrets.secretStoreName, then default.
+                        type: string
+                      secretPath:
+                        description: AWS Secrets Manager path containing the webhook secret.
+                        type: string
+                        minLength: 1
+                      secretKey:
+                        description: JSON property containing the webhook secret. Defaults to webhookSecret.
+                        type: string
+                        default: webhookSecret
+                      maxPayloadSizeMB:
+                        description: Maximum webhook request payload accepted by ArgoCD. Defaults to 10 MiB.
+                        type: integer
+                        minimum: 1
+                        maximum: 50
+                        default: 10
+                    x-kubernetes-validations:
+                    - rule: "!self.enabled || has(self.secretPath)"
+                      message: spec.repository.webhook.secretPath is required when the webhook is enabled
                 required:
                 - org
               externalSecrets:
@@ -332,6 +360,8 @@ spec:
             x-kubernetes-validations:
             - rule: "!has(self.auth) || !has(self.auth.oidc) || !self.auth.oidc.enabled || (has(self.exposure) && self.exposure.enabled)"
               message: spec.exposure.enabled must be true when native OIDC is enabled
+            - rule: "!has(self.repository) || !has(self.repository.webhook) || !self.repository.webhook.enabled || (has(self.exposure) && self.exposure.enabled)"
+              message: spec.exposure.enabled must be true when the GitHub webhook is enabled
           status:
             description: GitopsStackStatus defines the observed state.
             type: object

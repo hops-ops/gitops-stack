@@ -12,6 +12,7 @@
 # ==============================================================================
 {{- $name := $metadata.name | default "gitops" }}
 {{- $clusterName := $spec.clusterName | default $name }}
+{{- $resourceNamespace := $metadata.namespace | default "default" }}
 {{- $namespace := $spec.namespace | default "argocd" }}
 {{- $managementPolicies := list "*" }}
 {{- if hasKey $spec "managementPolicies" }}
@@ -152,6 +153,17 @@
 {{- if hasKey $repoSpec "deleteBranchOnMerge" }}
   {{- $repoDeleteBranchOnMerge = $repoSpec.deleteBranchOnMerge }}
 {{- end }}
+{{- $webhookSpec := $repoSpec.webhook | default dict }}
+{{- $webhookEnabled := false }}
+{{- if hasKey $webhookSpec "enabled" }}
+  {{- $webhookEnabled = $webhookSpec.enabled }}
+{{- end }}
+{{- if and $webhookEnabled (eq ($webhookSpec.secretPath | default "") "") }}
+  {{- fail "spec.repository.webhook.secretPath is required when the webhook is enabled" }}
+{{- end }}
+{{- if and $webhookEnabled (not $exposureEnabled) }}
+  {{- fail "spec.exposure.enabled must be true when the GitHub webhook is enabled" }}
+{{- end }}
 
 # Template config (optional)
 {{- $repoTemplate := $repoSpec.template | default dict }}
@@ -180,6 +192,7 @@
 {{- $state := dict
   "name" $name
   "clusterName" $clusterName
+  "resourceNamespace" $resourceNamespace
   "namespace" $namespace
   "managementPolicies" $managementPolicies
   "nonDeletingManagementPolicies" $nonDeletingManagementPolicies
@@ -251,6 +264,15 @@
     "deleteBranchOnMerge" $repoDeleteBranchOnMerge
     "allowDelete" ($repoSpec.allowDelete | default false)
     "url" $repoUrl
+    "webhook" (dict
+      "enabled" $webhookEnabled
+      "secretStoreName" ($webhookSpec.secretStoreName | default ($esoSpec.secretStoreName | default "default"))
+      "secretPath" ($webhookSpec.secretPath | default "")
+      "secretKey" ($webhookSpec.secretKey | default "webhookSecret")
+      "secretName" (printf "%s-github-webhook" $name)
+      "url" (printf "https://%s/api/webhook" $exposureHostname)
+      "maxPayloadSizeMB" ($webhookSpec.maxPayloadSizeMB | default 10)
+    )
   )
   "externalSecrets" (dict
     "enabled" ($esoSpec.enabled | default false)

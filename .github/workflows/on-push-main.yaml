@@ -29,6 +29,7 @@ jobs:
         [
           { "example": "examples/gitopsstacks/minimal.yaml" },
           { "example": "examples/gitopsstacks/standard.yaml" },
+          { "example": "examples/gitopsstacks/webhook.yaml" },
           { "example": "examples/gitopsstacks/standard.yaml", "observed_resources": "examples/test/mocks/observed-resources/standard/steps/1/" },
           { "example": "examples/gitopsstacks/standard.yaml", "observed_resources": "examples/test/mocks/observed-resources/standard/steps/2/" },
           { "example": "examples/gitopsstacks/eso.yaml" },
