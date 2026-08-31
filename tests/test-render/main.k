@@ -974,7 +974,7 @@ _items = [
     }
 
     # ==========================================================================
-    # Test 20: GitHub webhook maps one external secret to GitHub and ArgoCD
+    # Test 20: GitHub webhook uses distinct Secrets in a shared namespace
     # ==========================================================================
     metav1alpha1.CompositionTest {
         metadata.name = "github-webhook-refreshes-argocd"
@@ -990,6 +990,7 @@ _items = [
                 }
                 spec = {
                     clusterName = "test-cluster"
+                    namespace = "platform"
                     exposure = {
                         enabled = True
                         hostname = "argocd.example.com"
@@ -1014,7 +1015,7 @@ _items = [
                     metadata.name = "argocd"
                     spec.forProvider.values.configs = {
                         cm = {"webhook.maxPayloadSizeMB" = "8"}
-                        secret.githubSecret = "$webhook-test-github-webhook:secret"
+                        secret.githubSecret = "$webhook-test-argocd-github-webhook:secret"
                     }
                 }
                 {
@@ -1048,8 +1049,17 @@ _items = [
                     apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
                     kind = "Object"
                     metadata.name = "webhook-test-argocd-webhook-secret"
-                    spec.forProvider.manifest.spec.target.template.metadata.labels = {
-                        "app.kubernetes.io/part-of" = "argocd"
+                    spec.forProvider.manifest = {
+                        metadata = {
+                            name = "webhook-test-argocd-github-webhook"
+                            namespace = "platform"
+                        }
+                        spec.target = {
+                            name = "webhook-test-argocd-github-webhook"
+                            template.metadata.labels = {
+                                "app.kubernetes.io/part-of" = "argocd"
+                            }
+                        }
                     }
                 }
                 {

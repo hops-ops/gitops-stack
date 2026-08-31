@@ -113,7 +113,7 @@ spec:
       {{- $webhookValues := dict
         "configs" (dict
           "cm" (dict "webhook.maxPayloadSizeMB" (printf "%d" $webhook.maxPayloadSizeMB))
-          "secret" (dict "githubSecret" (printf "$%s:secret" $webhook.secretName))
+          "secret" (dict "githubSecret" (printf "$%s:secret" $webhook.argocdSecretName))
         )
       }}
       {{- $effectiveValues = mergeOverwrite $effectiveValues $webhookValues }}
