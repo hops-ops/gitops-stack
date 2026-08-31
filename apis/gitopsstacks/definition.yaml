@@ -269,8 +269,12 @@ spec:
                         description: Create a push webhook targeting the exposed ArgoCD server. Defaults to false.
                         type: boolean
                         default: false
+                      generate:
+                        description: Generate the shared secret and push it to AWS Secrets Manager. Defaults to true. Set false to use a pre-existing secret.
+                        type: boolean
+                        default: true
                       secretStoreName:
-                        description: ClusterSecretStore used to read the webhook secret. Defaults to externalSecrets.secretStoreName, then default.
+                        description: ClusterSecretStore used to push and read the webhook secret. Defaults to externalSecrets.secretStoreName, then default.
                         type: string
                       secretPath:
                         description: AWS Secrets Manager path containing the webhook secret.
@@ -289,6 +293,8 @@ spec:
                     x-kubernetes-validations:
                     - rule: "!self.enabled || has(self.secretPath)"
                       message: spec.repository.webhook.secretPath is required when the webhook is enabled
+                    - rule: "!self.enabled || !self.generate || !has(self.secretPath) || self.secretPath.startsWith('push/')"
+                      message: spec.repository.webhook.secretPath must start with push/ when secret generation is enabled
                 required:
                 - org
               externalSecrets:

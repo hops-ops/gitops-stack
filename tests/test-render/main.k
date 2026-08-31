@@ -974,7 +974,7 @@ _items = [
     }
 
     # ==========================================================================
-    # Test 20: GitHub webhook uses distinct Secrets in a shared namespace
+    # Test 20: GitHub webhook generates once and uses distinct target Secrets
     # ==========================================================================
     metav1alpha1.CompositionTest {
         metadata.name = "github-webhook-refreshes-argocd"
@@ -1001,7 +1001,7 @@ _items = [
                         webhook = {
                             enabled = True
                             secretStoreName = "aws-secrets"
-                            secretPath = "github/argocd-webhook"
+                            secretPath = "push/production/argo/github-webhook"
                             secretKey = "hook_secret"
                             maxPayloadSizeMB = 8
                         }
@@ -1016,6 +1016,65 @@ _items = [
                     spec.forProvider.values.configs = {
                         cm = {"webhook.maxPayloadSizeMB" = "8"}
                         secret.githubSecret = "$webhook-test-argocd-github-webhook:secret"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "webhook-test-webhook-secret-generator"
+                    spec = {
+                        readiness.policy = "SuccessfulCreate"
+                        forProvider.manifest = {
+                            apiVersion = "generators.external-secrets.io/v1alpha1"
+                            kind = "Password"
+                            metadata = {
+                                name = "webhook-test-github-webhook"
+                                namespace = "platform"
+                            }
+                            spec = {
+                                length = 64
+                                digits = 16
+                                symbols = 0
+                                allowRepeat = True
+                                encoding = "raw"
+                            }
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "webhook-test-webhook-secret-push"
+                    spec.forProvider.manifest = {
+                        apiVersion = "external-secrets.io/v1alpha1"
+                        kind = "PushSecret"
+                        metadata = {
+                            name = "webhook-test-github-webhook"
+                            namespace = "platform"
+                        }
+                        spec = {
+                            updatePolicy = "IfNotExists"
+                            deletionPolicy = "None"
+                            secretStoreRefs = [{
+                                name = "aws-secrets"
+                                kind = "ClusterSecretStore"
+                            }]
+                            selector.generatorRef = {
+                                apiVersion = "generators.external-secrets.io/v1alpha1"
+                                kind = "Password"
+                                name = "webhook-test-github-webhook"
+                            }
+                            data = [{
+                                match = {
+                                    secretKey = "password"
+                                    remoteRef = {
+                                        remoteKey = "push/production/argo/github-webhook"
+                                        property = "hook_secret"
+                                    }
+                                }
+                                metadata.spec.secretPushFormat = "string"
+                            }]
+                        }
                     }
                 }
                 {
@@ -1038,7 +1097,7 @@ _items = [
                             data = [{
                                 secretKey = "webhookSecret"
                                 remoteRef = {
-                                    key = "github/argocd-webhook"
+                                    key = "push/production/argo/github-webhook"
                                     property = "hook_secret"
                                 }
                             }]

@@ -158,8 +158,15 @@
 {{- if hasKey $webhookSpec "enabled" }}
   {{- $webhookEnabled = $webhookSpec.enabled }}
 {{- end }}
+{{- $webhookGenerate := true }}
+{{- if hasKey $webhookSpec "generate" }}
+  {{- $webhookGenerate = $webhookSpec.generate }}
+{{- end }}
 {{- if and $webhookEnabled (eq ($webhookSpec.secretPath | default "") "") }}
   {{- fail "spec.repository.webhook.secretPath is required when the webhook is enabled" }}
+{{- end }}
+{{- if and $webhookEnabled $webhookGenerate (not (hasPrefix "push/" ($webhookSpec.secretPath | default ""))) }}
+  {{- fail "spec.repository.webhook.secretPath must start with push/ when secret generation is enabled" }}
 {{- end }}
 {{- if and $webhookEnabled (not $exposureEnabled) }}
   {{- fail "spec.exposure.enabled must be true when the GitHub webhook is enabled" }}
@@ -266,9 +273,11 @@
     "url" $repoUrl
     "webhook" (dict
       "enabled" $webhookEnabled
+      "generate" $webhookGenerate
       "secretStoreName" ($webhookSpec.secretStoreName | default ($esoSpec.secretStoreName | default "default"))
       "secretPath" ($webhookSpec.secretPath | default "")
       "secretKey" ($webhookSpec.secretKey | default "webhookSecret")
+      "generatorName" (printf "%s-github-webhook" $name)
       "providerSecretName" (printf "%s-github-webhook" $name)
       "argocdSecretName" (printf "%s-argocd-github-webhook" $name)
       "url" (printf "https://%s/api/webhook" $exposureHostname)

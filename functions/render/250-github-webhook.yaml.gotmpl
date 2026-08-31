@@ -2,15 +2,100 @@
 #
 # GitHub push webhook for immediate ArgoCD refreshes.
 #
-# The shared secret stays in AWS Secrets Manager. External Secrets projects it
-# into both the composite namespace (for provider-upjet-github) and the ArgoCD
-# namespace. The Helm Release contains only ArgoCD's external-secret reference.
+# The shared secret stays in AWS Secrets Manager. By default, ESO generates it
+# once and pushes it under the SecretStack-owned push/ prefix. External Secrets
+# then projects it into both the composite namespace (for provider-upjet-github)
+# and the ArgoCD namespace. The Helm Release contains only ArgoCD's
+# external-secret reference.
 #
 
 {{- $repo := $state.repository }}
 {{- $webhook := $repo.webhook }}
 
 {{- if $webhook.enabled }}
+{{- if $webhook.generate }}
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-webhook-secret-generator
+  annotations:
+    {{ setResourceNameAnnotation "webhook-secret-generator" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  readiness:
+    policy: SuccessfulCreate
+  forProvider:
+    manifest:
+      apiVersion: generators.external-secrets.io/v1alpha1
+      kind: Password
+      metadata:
+        name: {{ $webhook.generatorName }}
+        namespace: {{ $state.resourceNamespace }}
+        labels: {{ $state.labels | toJson }}
+      spec:
+        length: 64
+        digits: 16
+        symbols: 0
+        allowRepeat: true
+        encoding: raw
+  providerConfigRef:
+    name: {{ $state.kubernetesProviderConfigRef.name }}
+    kind: {{ $state.kubernetesProviderConfigRef.kind }}
+
+---
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: {{ $state.name }}-webhook-secret-push
+  annotations:
+    {{ setResourceNameAnnotation "webhook-secret-push" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  readiness:
+    policy: DeriveFromObject
+  forProvider:
+    manifest:
+      apiVersion: external-secrets.io/v1alpha1
+      kind: PushSecret
+      metadata:
+        name: {{ $state.name }}-github-webhook
+        namespace: {{ $state.resourceNamespace }}
+        labels: {{ $state.labels | toJson }}
+      spec:
+        updatePolicy: IfNotExists
+        deletionPolicy: None
+        refreshInterval: 1h0m0s
+        secretStoreRefs:
+        - name: {{ $webhook.secretStoreName }}
+          kind: ClusterSecretStore
+        selector:
+          generatorRef:
+            apiVersion: generators.external-secrets.io/v1alpha1
+            kind: Password
+            name: {{ $webhook.generatorName }}
+        data:
+        - match:
+            secretKey: password
+            remoteRef:
+              remoteKey: {{ $webhook.secretPath }}
+              property: {{ $webhook.secretKey }}
+          metadata:
+            apiVersion: kubernetes.external-secrets.io/v1alpha1
+            kind: PushSecretMetadata
+            spec:
+              secretPushFormat: string
+              description: {{ printf "ArgoCD GitHub webhook secret for %s" $state.clusterName | quote }}
+              tags:
+                hops.ops.com.ai/managed: "true"
+                hops.ops.com.ai/gitopsstack: {{ $state.name | quote }}
+  providerConfigRef:
+    name: {{ $state.kubernetesProviderConfigRef.name }}
+    kind: {{ $state.kubernetesProviderConfigRef.kind }}
+{{- end }}
+
 ---
 apiVersion: kubernetes.m.crossplane.io/v1alpha1
 kind: Object
@@ -125,6 +210,29 @@ spec:
     kind: {{ $state.githubProviderConfigRef.kind }}
 
 {{- $obs := $state.observed }}
+{{- if and $webhook.generate $obs.webhook.generatorReady $obs.webhook.pushReady }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-webhook-push-before-generator
+  annotations:
+    {{ setResourceNameAnnotation "usage-webhook-push-generator" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  replayDeletion: true
+  of:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-webhook-secret-generator
+  by:
+    apiVersion: kubernetes.m.crossplane.io/v1alpha1
+    kind: Object
+    resourceRef:
+      name: {{ $state.name }}-webhook-secret-push
+{{- end }}
+
 {{- if and $obs.repository.ready $obs.webhook.ready }}
 ---
 apiVersion: protection.crossplane.io/v1beta1

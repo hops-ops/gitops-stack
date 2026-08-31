@@ -120,8 +120,9 @@ When `template` is set, the repo is created from the template instead of auto-in
 #### Immediate refresh after GitHub pushes
 
 Enable the native ArgoCD webhook to replace its polling delay with push-driven
-refreshes. The secret value remains in AWS Secrets Manager; the Helm Release
-stores only a reference to the External Secrets-managed Kubernetes Secret.
+refreshes. By default, External Secrets generates the shared value once and
+pushes it to AWS Secrets Manager. The Helm Release stores only a reference to
+the External Secrets-managed Kubernetes Secret.
 
 ```yaml
 spec:
@@ -133,14 +134,17 @@ spec:
     webhook:
       enabled: true
       secretStoreName: default
-      secretPath: github/argocd-webhook
+      secretPath: push/example-cluster/argo/github-webhook
       secretKey: webhookSecret
       maxPayloadSizeMB: 10
 ```
 
 This creates a GitHub `push` webhook for
-`https://argocd.example.com/api/webhook`. SecretStack and a public ArgoCD
-Gateway route are required.
+`https://argocd.example.com/api/webhook`. The generated secret uses
+`updatePolicy: IfNotExists` and is retained when the stack is deleted, making
+AWS Secrets Manager the durable source of truth. SecretStack, a path under its
+`push/*` write boundary, and a public ArgoCD Gateway route are required. Set
+`generate: false` to read a pre-existing secret from another path instead.
 
 ### Stage 3: Crossplane Integration
 
@@ -321,7 +325,8 @@ The Usage ensures ArgoCD CRDs stay alive until all ArgoCD Application CRs are cl
 | `repository.topics` | []string | no | `[]` | Repository topics |
 | `repository.deleteBranchOnMerge` | boolean | no | `true` | Auto-delete head branches on merge |
 | `repository.webhook.enabled` | boolean | no | `false` | Create a signed GitHub push webhook for immediate ArgoCD refreshes |
-| `repository.webhook.secretStoreName` | string | no | `externalSecrets.secretStoreName` or `default` | ClusterSecretStore containing the shared secret |
+| `repository.webhook.generate` | boolean | no | `true` | Generate the shared secret once and push it to AWS Secrets Manager |
+| `repository.webhook.secretStoreName` | string | no | `externalSecrets.secretStoreName` or `default` | ClusterSecretStore used to push and read the shared secret |
 | `repository.webhook.secretPath` | string | when enabled | — | AWS Secrets Manager path containing the shared secret |
 | `repository.webhook.secretKey` | string | no | `webhookSecret` | JSON property containing the shared secret |
 | `repository.webhook.maxPayloadSizeMB` | integer | no | `10` | Maximum webhook payload accepted by ArgoCD |

@@ -18,6 +18,6 @@ spec:
     webhook:
       enabled: true
       secretStoreName: default
-      secretPath: github/argocd-webhook
+      secretPath: push/example-cluster/argo/github-webhook
       secretKey: webhookSecret
       maxPayloadSizeMB: 10

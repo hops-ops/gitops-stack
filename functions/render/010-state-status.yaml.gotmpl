@@ -11,7 +11,7 @@
 
 {{- $checkReady := dict }}
 {{- $checkExists := dict }}
-{{- range $key := list "nodepool-gitops" "helm-release-argocd" "github-repository" "argocd-apps" "crossplane-app" "external-secret-argocd-repo-creds" "external-secret-github-webhook" "external-secret-argocd-webhook" "github-repository-webhook" "zitadel-credentials" "zitadel-provider-config" "zitadel-project" "zitadel-oidc-client" "zitadel-client-secret" }}
+{{- range $key := list "nodepool-gitops" "helm-release-argocd" "github-repository" "argocd-apps" "crossplane-app" "webhook-secret-generator" "webhook-secret-push" "external-secret-argocd-repo-creds" "external-secret-github-webhook" "external-secret-argocd-webhook" "github-repository-webhook" "zitadel-credentials" "zitadel-provider-config" "zitadel-project" "zitadel-oidc-client" "zitadel-client-secret" }}
   {{- $entry := get $observed $key | default dict }}
   {{- $resource := $entry.resource | default dict }}
   {{- $status := $resource.status | default dict }}
@@ -70,6 +70,10 @@
     "exists" (get $checkExists "external-secret-argocd-repo-creds")
   )
   "webhook" (dict
+    "generatorReady" (get $checkReady "webhook-secret-generator")
+    "generatorExists" (get $checkExists "webhook-secret-generator")
+    "pushReady" (get $checkReady "webhook-secret-push")
+    "pushExists" (get $checkExists "webhook-secret-push")
     "secretReady" (get $checkReady "external-secret-github-webhook")
     "secretExists" (get $checkExists "external-secret-github-webhook")
     "argocdSecretReady" (get $checkReady "external-secret-argocd-webhook")
@@ -113,6 +117,13 @@
     $state.observed.webhook.argocdSecretReady
     $state.observed.webhook.ready
   }}
+  {{- if $state.repository.webhook.generate }}
+    {{- $ready = and
+      $ready
+      $state.observed.webhook.generatorReady
+      $state.observed.webhook.pushReady
+    }}
+  {{- end }}
 {{- end }}
 {{- if $state.applications.apps.enabled }}
   {{- $ready = and $ready $state.observed.appsApp.ready }}
