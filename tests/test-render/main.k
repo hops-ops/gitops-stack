@@ -972,6 +972,186 @@ _items = [
             ]
         }
     }
+
+    # ==========================================================================
+    # Test 20: GitHub webhook generates once and uses distinct target Secrets
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "github-webhook-refreshes-argocd"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = stacksv1alpha1.GitopsStack {
+                metadata = {
+                    name = "webhook-test"
+                    namespace = "platform"
+                }
+                spec = {
+                    clusterName = "test-cluster"
+                    namespace = "platform"
+                    exposure = {
+                        enabled = True
+                        hostname = "argocd.example.com"
+                    }
+                    repository = {
+                        org = "hops-ops"
+                        name = "platform-gitops"
+                        webhook = {
+                            enabled = True
+                            secretStoreName = "aws-secrets"
+                            secretPath = "push/production/argo/github-webhook"
+                            secretKey = "hook_secret"
+                            maxPayloadSizeMB = 8
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "argocd"
+                    spec.forProvider.values.configs = {
+                        cm = {"webhook.maxPayloadSizeMB" = "8"}
+                        secret.githubSecret = "$webhook-test-argocd-github-webhook:secret"
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "webhook-test-webhook-secret-generator"
+                    spec = {
+                        readiness.policy = "SuccessfulCreate"
+                        forProvider.manifest = {
+                            apiVersion = "generators.external-secrets.io/v1alpha1"
+                            kind = "Password"
+                            metadata = {
+                                name = "webhook-test-github-webhook"
+                                namespace = "platform"
+                            }
+                            spec = {
+                                length = 64
+                                digits = 16
+                                symbols = 0
+                                allowRepeat = True
+                                encoding = "raw"
+                            }
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "webhook-test-webhook-secret-push"
+                    spec.forProvider.manifest = {
+                        apiVersion = "external-secrets.io/v1alpha1"
+                        kind = "PushSecret"
+                        metadata = {
+                            name = "webhook-test-github-webhook"
+                            namespace = "platform"
+                        }
+                        spec = {
+                            updatePolicy = "IfNotExists"
+                            deletionPolicy = "None"
+                            secretStoreRefs = [{
+                                name = "aws-secrets"
+                                kind = "ClusterSecretStore"
+                            }]
+                            selector.generatorRef = {
+                                apiVersion = "generators.external-secrets.io/v1alpha1"
+                                kind = "Password"
+                                name = "webhook-test-github-webhook"
+                            }
+                            data = [{
+                                match = {
+                                    secretKey = "password"
+                                    remoteRef = {
+                                        remoteKey = "push/production/argo/github-webhook"
+                                        property = "hook_secret"
+                                    }
+                                }
+                                metadata.spec.secretPushFormat = "string"
+                            }]
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "webhook-test-github-webhook-secret"
+                    spec.forProvider.manifest = {
+                        apiVersion = "external-secrets.io/v1"
+                        kind = "ExternalSecret"
+                        metadata = {
+                            name = "webhook-test-github-webhook"
+                            namespace = "platform"
+                        }
+                        spec = {
+                            secretStoreRef = {
+                                name = "aws-secrets"
+                                kind = "ClusterSecretStore"
+                            }
+                            target.template.data.url = "https://argocd.example.com/api/webhook"
+                            data = [{
+                                secretKey = "webhookSecret"
+                                remoteRef = {
+                                    key = "push/production/argo/github-webhook"
+                                    property = "hook_secret"
+                                }
+                            }]
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "webhook-test-argocd-webhook-secret"
+                    spec.forProvider.manifest = {
+                        metadata = {
+                            name = "webhook-test-argocd-github-webhook"
+                            namespace = "platform"
+                        }
+                        spec.target = {
+                            name = "webhook-test-argocd-github-webhook"
+                            template.metadata.labels = {
+                                "app.kubernetes.io/part-of" = "argocd"
+                            }
+                        }
+                    }
+                }
+                {
+                    apiVersion = "repo.github.m.upbound.io/v1alpha1"
+                    kind = "RepositoryWebhook"
+                    metadata.name = "platform-gitops"
+                    spec = {
+                        forProvider = {
+                            active = True
+                            events = ["push"]
+                            repositoryRef.name = "platform-gitops"
+                            configuration = [{
+                                contentType = "json"
+                                insecureSsl = False
+                                urlSecretRef = {
+                                    name = "webhook-test-github-webhook"
+                                    key = "url"
+                                }
+                                secretSecretRef = {
+                                    name = "webhook-test-github-webhook"
+                                    key = "secret"
+                                }
+                            }]
+                        }
+                        providerConfigRef = {
+                            name = "default"
+                            kind = "ProviderConfig"
+                        }
+                    }
+                }
+            ]
+        }
+    }
 ]
 
 items = _items

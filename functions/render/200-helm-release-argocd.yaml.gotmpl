@@ -108,6 +108,17 @@ spec:
       {{- $effectiveValues = mergeOverwrite $effectiveValues $exposureValues }}
     {{- end }}
 
+    {{- $webhook := $state.repository.webhook }}
+    {{- if $webhook.enabled }}
+      {{- $webhookValues := dict
+        "configs" (dict
+          "cm" (dict "webhook.maxPayloadSizeMB" (printf "%d" $webhook.maxPayloadSizeMB))
+          "secret" (dict "githubSecret" (printf "$%s:secret" $webhook.argocdSecretName))
+        )
+      }}
+      {{- $effectiveValues = mergeOverwrite $effectiveValues $webhookValues }}
+    {{- end }}
+
     {{- $oidc := $state.auth.oidc }}
     {{- if and $oidc.enabled $state.observed.zitadel.clientId }}
       {{- $oidcConfig := dict

@@ -12,6 +12,7 @@
 # ==============================================================================
 {{- $name := $metadata.name | default "gitops" }}
 {{- $clusterName := $spec.clusterName | default $name }}
+{{- $resourceNamespace := $metadata.namespace | default "default" }}
 {{- $namespace := $spec.namespace | default "argocd" }}
 {{- $managementPolicies := list "*" }}
 {{- if hasKey $spec "managementPolicies" }}
@@ -152,6 +153,24 @@
 {{- if hasKey $repoSpec "deleteBranchOnMerge" }}
   {{- $repoDeleteBranchOnMerge = $repoSpec.deleteBranchOnMerge }}
 {{- end }}
+{{- $webhookSpec := $repoSpec.webhook | default dict }}
+{{- $webhookEnabled := false }}
+{{- if hasKey $webhookSpec "enabled" }}
+  {{- $webhookEnabled = $webhookSpec.enabled }}
+{{- end }}
+{{- $webhookGenerate := true }}
+{{- if hasKey $webhookSpec "generate" }}
+  {{- $webhookGenerate = $webhookSpec.generate }}
+{{- end }}
+{{- if and $webhookEnabled (eq ($webhookSpec.secretPath | default "") "") }}
+  {{- fail "spec.repository.webhook.secretPath is required when the webhook is enabled" }}
+{{- end }}
+{{- if and $webhookEnabled $webhookGenerate (not (hasPrefix "push/" ($webhookSpec.secretPath | default ""))) }}
+  {{- fail "spec.repository.webhook.secretPath must start with push/ when secret generation is enabled" }}
+{{- end }}
+{{- if and $webhookEnabled (not $exposureEnabled) }}
+  {{- fail "spec.exposure.enabled must be true when the GitHub webhook is enabled" }}
+{{- end }}
 
 # Template config (optional)
 {{- $repoTemplate := $repoSpec.template | default dict }}
@@ -180,6 +199,7 @@
 {{- $state := dict
   "name" $name
   "clusterName" $clusterName
+  "resourceNamespace" $resourceNamespace
   "namespace" $namespace
   "managementPolicies" $managementPolicies
   "nonDeletingManagementPolicies" $nonDeletingManagementPolicies
@@ -251,6 +271,18 @@
     "deleteBranchOnMerge" $repoDeleteBranchOnMerge
     "allowDelete" ($repoSpec.allowDelete | default false)
     "url" $repoUrl
+    "webhook" (dict
+      "enabled" $webhookEnabled
+      "generate" $webhookGenerate
+      "secretStoreName" ($webhookSpec.secretStoreName | default ($esoSpec.secretStoreName | default "default"))
+      "secretPath" ($webhookSpec.secretPath | default "")
+      "secretKey" ($webhookSpec.secretKey | default "webhookSecret")
+      "generatorName" (printf "%s-github-webhook" $name)
+      "providerSecretName" (printf "%s-github-webhook" $name)
+      "argocdSecretName" (printf "%s-argocd-github-webhook" $name)
+      "url" (printf "https://%s/api/webhook" $exposureHostname)
+      "maxPayloadSizeMB" ($webhookSpec.maxPayloadSizeMB | default 10)
+    )
   )
   "externalSecrets" (dict
     "enabled" ($esoSpec.enabled | default false)

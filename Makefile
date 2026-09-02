@@ -27,6 +27,7 @@ EXAMPLES := \
     examples/gitopsstacks/minimal.yaml:: \
     examples/gitopsstacks/standard.yaml:: \
     examples/gitopsstacks/nodepool.yaml:: \
+    examples/gitopsstacks/webhook.yaml:: \
     examples/gitopsstacks/standard.yaml::examples/test/mocks/observed-resources/standard/steps/1/ \
     examples/gitopsstacks/standard.yaml::examples/test/mocks/observed-resources/standard/steps/2/ \
     examples/gitopsstacks/eso.yaml:: \
