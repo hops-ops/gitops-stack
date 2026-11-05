@@ -143,8 +143,72 @@ This creates a GitHub `push` webhook for
 `https://argocd.example.com/api/webhook`. The generated secret uses
 `updatePolicy: IfNotExists` and is retained when the stack is deleted, making
 AWS Secrets Manager the durable source of truth. SecretStack, a path under its
-`push/*` write boundary, and a public ArgoCD Gateway route are required. Set
+`push/*` write boundary, and a publicly reachable webhook endpoint are required. Set
 `generate: false` to read a pre-existing secret from another path instead.
+
+
+#### Private UI with a separate public webhook
+
+Set `repository.webhook.url` to a public HTTPS endpoint when the UI hostname
+resolves to a private Gateway. The URL must end in `/api/webhook` and cannot
+contain credentials, a query string or a fragment. An explicit port must be
+between 1 and 65535. Without this override the
+existing `https://<exposure.hostname>/api/webhook` behavior is unchanged.
+
+```yaml
+spec:
+  exposure:
+    enabled: true
+    hostname: argocd.example.com
+    gatewayRef:
+      name: private
+      namespace: ingress
+      sectionName: https-argocd
+    routeAnnotations:
+      external-dns.alpha.kubernetes.io/cloudflare-proxied: "false"
+  repository:
+    org: hops-ops
+    webhook:
+      enabled: true
+      url: https://argocd-webhook.example.com/api/webhook
+      secretPath: push/example-cluster/argo/github-webhook
+```
+
+The webhook override updates the URL exported in the shared Kubernetes Secret;
+GitopsEnvironment consumers of that Secret follow it on reconciliation. It does
+not rotate the HMAC secret, change the UI URL, alter native OIDC callbacks or
+create a public route. Provision a separate public HTTPRoute before changing
+webhook URLs. Restrict that route to `POST` and the exact `/api/webhook` path,
+backed by `argocd-server:80` in the Argo namespace; keep all UI/API paths private.
+Require `X-GitHub-Event` to be `push` or `ping`, and remove competing provider
+headers (`X-Vss-Activityid`, `X-Gogs-Event`, `X-Gitlab-Event`, `X-Hook-UUID`,
+`X-Event-Key`) before forwarding. Argo shares this endpoint across providers;
+these restrictions ensure requests use the GitHub handler and its existing
+shared HMAC verification. Verify new GitHub deliveries
+before moving the UI's DNS and Gateway parent. A webhook may also use an explicit
+URL with `exposure.enabled: false` if routing is managed separately. In that
+case the XR does not select backend TLS for the externally managed route. For
+TLS termination at the Gateway with an HTTP `argocd-server:80` backend, set:
+
+```yaml
+spec:
+  argocd:
+    values:
+      configs:
+        params:
+          server.insecure: "true"
+```
+
+Alternatively, keep Argo's server TLS enabled and configure the externally
+managed Gateway's backend TLS appropriately. Match the backend scheme to this
+setting: GitHub webhook POSTs must reach the handler without an HTTP-to-HTTPS
+redirect. The public webhook URL itself remains HTTPS in either case.
+
+`exposure.routeAnnotations` applies only to the UI HTTPRoute. Typed annotation
+keys take precedence over matching `argocd.values.server.httproute.annotations`
+keys while retaining unrelated raw annotations. Other Helm values and resources
+are unaffected. The public/private network boundary belongs to the chosen
+Gateway and DNS target; annotations alone do not make an endpoint private.
 
 ### Stage 3: Crossplane Integration
 
@@ -308,7 +372,8 @@ The Usage ensures ArgoCD CRDs stay alive until all ArgoCD Application CRs are cl
 | `argocd.values` | object | no | `{}` | Helm values merged with defaults |
 | `argocd.overrideAllValues` | object | no | — | Helm values replacing all defaults |
 | `exposure.enabled` | boolean | no | `false` | Create an ArgoCD HTTPRoute |
-| `exposure.hostname` | string | with exposure | — | Public ArgoCD hostname |
+| `exposure.hostname` | string | with exposure | — | ArgoCD UI hostname |
+| `exposure.routeAnnotations` | map of strings | no | `{}` | Annotations on only the ArgoCD HTTPRoute |
 | `exposure.gatewayRef.*` | object | no | `platform` / `istio-ingress` / `https` | Existing Gateway listener |
 | `auth.oidc.enabled` | boolean | no | `false` | Enable native ArgoCD OIDC with Zitadel |
 | `auth.oidc.issuerURL` | string | with OIDC | — | Zitadel issuer URL |
@@ -325,6 +390,7 @@ The Usage ensures ArgoCD CRDs stay alive until all ArgoCD Application CRs are cl
 | `repository.topics` | []string | no | `[]` | Repository topics |
 | `repository.deleteBranchOnMerge` | boolean | no | `true` | Auto-delete head branches on merge |
 | `repository.webhook.enabled` | boolean | no | `false` | Create a signed GitHub push webhook for immediate ArgoCD refreshes |
+| `repository.webhook.url` | string | no | `https://<exposure.hostname>/api/webhook` | Independent public HTTPS webhook endpoint |
 | `repository.webhook.generate` | boolean | no | `true` | Generate the shared secret once and push it to AWS Secrets Manager |
 | `repository.webhook.secretStoreName` | string | no | `externalSecrets.secretStoreName` or `default` | ClusterSecretStore used to push and read the shared secret |
 | `repository.webhook.secretPath` | string | when enabled | — | AWS Secrets Manager path containing the shared secret |

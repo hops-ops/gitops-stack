@@ -28,6 +28,8 @@ EXAMPLES := \
     examples/gitopsstacks/standard.yaml:: \
     examples/gitopsstacks/nodepool.yaml:: \
     examples/gitopsstacks/webhook.yaml:: \
+    examples/gitopsstacks/private-ui.yaml:: \
+    examples/gitopsstacks/webhook-only.yaml:: \
     examples/gitopsstacks/standard.yaml::examples/test/mocks/observed-resources/standard/steps/1/ \
     examples/gitopsstacks/standard.yaml::examples/test/mocks/observed-resources/standard/steps/2/ \
     examples/gitopsstacks/eso.yaml:: \
@@ -46,6 +48,7 @@ render\:all:
 		observed=$${entry#*::}; \
 		outfile="$$tmpdir/$$(echo $$entry | tr '/:' '__')"; \
 		( \
+			set -euo pipefail; \
 			if [ -n "$$observed" ]; then \
 				echo "=== Rendering $$example with observed-resources $$observed ==="; \
 				up composition render --xrd=$(DEFINITION) $(COMPOSITION) $$example --observed-resources=$$observed; \
@@ -76,6 +79,7 @@ validate\:all: generate-configuration
 		observed=$${entry#*::}; \
 		outfile="$$tmpdir/$$(echo $$entry | tr '/:' '__')"; \
 		( \
+			set -euo pipefail; \
 			if [ -n "$$observed" ]; then \
 				echo "=== Validating $$example with observed-resources $$observed ==="; \
 				up composition render --xrd=$(DEFINITION) $(COMPOSITION) $$example \

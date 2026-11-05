@@ -1,0 +1,24 @@
+apiVersion: hops.ops.com.ai/v1alpha1
+kind: GitopsStack
+metadata:
+  name: gitops
+  namespace: example-env
+spec:
+  clusterName: example-cluster
+  exposure:
+    enabled: true
+    hostname: argocd.example.com
+    gatewayRef:
+      name: private
+      namespace: ingress
+      sectionName: https-argocd
+    routeAnnotations:
+      external-dns.alpha.kubernetes.io/cloudflare-proxied: "false"
+  repository:
+    org: hops-ops
+    name: example-cluster-gitops
+    webhook:
+      enabled: true
+      url: https://argocd-webhook.example.com/api/webhook
+      secretStoreName: default
+      secretPath: push/example-cluster/argo/github-webhook
