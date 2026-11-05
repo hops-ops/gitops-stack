@@ -277,7 +277,7 @@ spec:
                       url:
                         description: Public HTTPS ArgoCD webhook URL ending in /api/webhook. Defaults to https://<exposure.hostname>/api/webhook. Set this independently when the UI uses private exposure.
                         type: string
-                        pattern: '^https://[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:[0-9]{1,5})?/api/webhook$'
+                        pattern: '^https://[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3}))?/api/webhook$'
                       generate:
                         description: Generate the shared secret and push it to AWS Secrets Manager. Defaults to true. Set false to use a pre-existing secret.
                         type: boolean

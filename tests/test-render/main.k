@@ -1244,6 +1244,7 @@ _items = [
                 metadata = {name = "webhook-only", namespace = "platform"}
                 spec = {
                     clusterName = "test-cluster"
+                    argocd.values.configs.params = {"server.insecure" = "true"}
                     exposure.enabled = False
                     repository = {
                         org = "hops-ops"
@@ -1251,17 +1252,23 @@ _items = [
                             enabled = True
                             generate = False
                             secretPath = "existing/github-webhook"
-                            url = "https://argocd-webhook.example.com/api/webhook"
+                            url = "https://argocd-webhook.example.com:8443/api/webhook"
                         }
                     }
                 }
             }
             assertResources = [
                 {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "argocd"
+                    spec.forProvider.values.configs.params = {"server.insecure" = "true"}
+                }
+                {
                     apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
                     kind = "Object"
                     metadata.name = "webhook-only-github-webhook-secret"
-                    spec.forProvider.manifest.spec.target.template.data.url = "https://argocd-webhook.example.com/api/webhook"
+                    spec.forProvider.manifest.spec.target.template.data.url = "https://argocd-webhook.example.com:8443/api/webhook"
                 }
             ]
         }

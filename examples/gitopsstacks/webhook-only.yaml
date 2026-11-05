@@ -5,6 +5,11 @@ metadata:
   namespace: example-env
 spec:
   clusterName: example-cluster
+  argocd:
+    values:
+      configs:
+        params:
+          server.insecure: "true"
   exposure:
     enabled: false
   repository:
