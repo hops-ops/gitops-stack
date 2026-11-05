@@ -1152,6 +1152,121 @@ _items = [
             ]
         }
     }
+    # A private UI keeps its callback/domain while the exported webhook URL moves.
+    metav1alpha1.CompositionTest {
+        metadata.name = "private-ui-public-webhook"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "hops.ops.com.ai/v1alpha1"
+                kind = "GitopsStack"
+                metadata = {name = "private-ui", namespace = "platform"}
+                spec = {
+                    clusterName = "test-cluster"
+                    argocd.values.server.httproute.annotations = {
+                        "example.com/retained" = "yes"
+                        "external-dns.alpha.kubernetes.io/cloudflare-proxied" = "true"
+                    }
+                    exposure = {
+                        enabled = True
+                        hostname = "argocd.example.com"
+                        gatewayRef = {name = "private", namespace = "ingress", sectionName = "https-argocd"}
+                        routeAnnotations = {"external-dns.alpha.kubernetes.io/cloudflare-proxied" = "false"}
+                    }
+                    repository = {
+                        org = "hops-ops"
+                        webhook = {
+                            enabled = True
+                            generate = False
+                            secretPath = "existing/github-webhook"
+                            url = "https://argocd-webhook.example.com/api/webhook"
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "argocd"
+                    spec.forProvider.values = {
+                        global.domain = "argocd.example.com"
+                        configs.cm.url = "https://argocd.example.com"
+                        configs.secret.githubSecret = "$private-ui-argocd-github-webhook:secret"
+                        server.httproute = {
+                            enabled = True
+                            hostnames = ["argocd.example.com"]
+                            parentRefs = [{name = "private", namespace = "ingress", sectionName = "https-argocd"}]
+                            annotations = {
+                                "example.com/retained" = "yes"
+                                "external-dns.alpha.kubernetes.io/cloudflare-proxied" = "false"
+                            }
+                        }
+                    }
+                }
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "private-ui-github-webhook-secret"
+                    spec.forProvider.manifest.spec = {
+                        target.template.data.url = "https://argocd-webhook.example.com/api/webhook"
+                        data = [{secretKey = "webhookSecret", remoteRef = {key = "existing/github-webhook", property = "webhookSecret"}}]
+                    }
+                }
+                {
+                    apiVersion = "repo.github.m.upbound.io/v1alpha1"
+                    kind = "RepositoryWebhook"
+                    metadata.name = "test-cluster-gitops"
+                    spec.forProvider.configuration = [{
+                        contentType = "json"
+                        insecureSsl = False
+                        urlSecretRef = {name = "private-ui-github-webhook", key = "url"}
+                        secretSecretRef = {name = "private-ui-github-webhook", key = "secret"}
+                    }]
+                }
+            ]
+        }
+    }
+    # A public webhook can reach a server whose UI route is managed elsewhere.
+    metav1alpha1.CompositionTest {
+        metadata.name = "webhook-without-ui-exposure"
+        spec = {
+            compositionPath = "apis/gitopsstacks/composition.yaml"
+            xrdPath = "apis/gitopsstacks/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = {
+                apiVersion = "hops.ops.com.ai/v1alpha1"
+                kind = "GitopsStack"
+                metadata = {name = "webhook-only", namespace = "platform"}
+                spec = {
+                    clusterName = "test-cluster"
+                    exposure.enabled = False
+                    repository = {
+                        org = "hops-ops"
+                        webhook = {
+                            enabled = True
+                            generate = False
+                            secretPath = "existing/github-webhook"
+                            url = "https://argocd-webhook.example.com/api/webhook"
+                        }
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "kubernetes.m.crossplane.io/v1alpha1"
+                    kind = "Object"
+                    metadata.name = "webhook-only-github-webhook-secret"
+                    spec.forProvider.manifest.spec.target.template.data.url = "https://argocd-webhook.example.com/api/webhook"
+                }
+            ]
+        }
+    }
+
 ]
 
 items = _items

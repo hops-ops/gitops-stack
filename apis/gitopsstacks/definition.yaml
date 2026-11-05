@@ -126,7 +126,7 @@ spec:
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
               exposure:
-                description: Optional public exposure of the ArgoCD server through an existing Gateway API Gateway.
+                description: Optional exposure of the ArgoCD server through an existing public or private Gateway API Gateway.
                 type: object
                 properties:
                   enabled:
@@ -134,9 +134,14 @@ spec:
                     type: boolean
                     default: false
                   hostname:
-                    description: Public DNS hostname for ArgoCD.
+                    description: DNS hostname for ArgoCD.
                     type: string
                     minLength: 1
+                  routeAnnotations:
+                    description: Annotations applied to the ArgoCD HTTPRoute, including per-route DNS provider settings.
+                    type: object
+                    additionalProperties:
+                      type: string
                   gatewayRef:
                     description: Existing Gateway listener that accepts the ArgoCD HTTPRoute.
                     type: object
@@ -262,13 +267,17 @@ spec:
                     type: boolean
                     default: false
                   webhook:
-                    description: GitHub webhook that immediately refreshes ArgoCD Applications when the repository changes. Requires SecretStack and public ArgoCD exposure.
+                    description: GitHub webhook that immediately refreshes ArgoCD Applications when the repository changes. Requires SecretStack and a publicly reachable webhook endpoint.
                     type: object
                     properties:
                       enabled:
-                        description: Create a push webhook targeting the exposed ArgoCD server. Defaults to false.
+                        description: Create a push webhook targeting ArgoCD. Defaults to false.
                         type: boolean
                         default: false
+                      url:
+                        description: Public HTTPS ArgoCD webhook URL ending in /api/webhook. Defaults to https://<exposure.hostname>/api/webhook. Set this independently when the UI uses private exposure.
+                        type: string
+                        pattern: '^https://[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:[0-9]{1,5})?/api/webhook$'
                       generate:
                         description: Generate the shared secret and push it to AWS Secrets Manager. Defaults to true. Set false to use a pre-existing secret.
                         type: boolean

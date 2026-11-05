@@ -99,7 +99,7 @@
 {{- $argocdSpec := $spec.argocd | default dict }}
 
 # ==============================================================================
-# Public exposure
+# Gateway exposure
 # ==============================================================================
 {{- $exposureSpec := $spec.exposure | default dict }}
 {{- $exposureEnabled := false }}
@@ -168,8 +168,12 @@
 {{- if and $webhookEnabled $webhookGenerate (not (hasPrefix "push/" ($webhookSpec.secretPath | default ""))) }}
   {{- fail "spec.repository.webhook.secretPath must start with push/ when secret generation is enabled" }}
 {{- end }}
-{{- if and $webhookEnabled (not $exposureEnabled) }}
-  {{- fail "spec.exposure.enabled must be true when the GitHub webhook is enabled" }}
+{{- $webhookURLOverride := $webhookSpec.url | default "" }}
+{{- if and (hasKey $webhookSpec "url") (not (regexMatch `^https://[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:[0-9]{1,5})?/api/webhook$` $webhookURLOverride)) }}
+  {{- fail "spec.repository.webhook.url must be an HTTPS endpoint ending in /api/webhook without credentials, query or fragment" }}
+{{- end }}
+{{- if and $webhookEnabled (not $exposureEnabled) (eq $webhookURLOverride "") }}
+  {{- fail "spec.exposure.enabled must be true when the GitHub webhook is enabled unless spec.repository.webhook.url is provided" }}
 {{- end }}
 
 # Template config (optional)
@@ -229,6 +233,7 @@
   "exposure" (dict
     "enabled" $exposureEnabled
     "hostname" $exposureHostname
+    "routeAnnotations" ($exposureSpec.routeAnnotations | default dict)
     "gatewayRef" (dict
       "name" ($gatewayRefSpec.name | default "platform")
       "namespace" ($gatewayRefSpec.namespace | default "istio-ingress")
@@ -280,7 +285,7 @@
       "generatorName" (printf "%s-github-webhook" $name)
       "providerSecretName" (printf "%s-github-webhook" $name)
       "argocdSecretName" (printf "%s-argocd-github-webhook" $name)
-      "url" (printf "https://%s/api/webhook" $exposureHostname)
+      "url" ($webhookURLOverride | default (printf "https://%s/api/webhook" $exposureHostname))
       "maxPayloadSizeMB" ($webhookSpec.maxPayloadSizeMB | default 10)
     )
   )

@@ -105,6 +105,9 @@ spec:
           )
         )
       }}
+      {{- with $state.exposure.routeAnnotations }}
+        {{- $_ := set $exposureValues.server.httproute "annotations" . }}
+      {{- end }}
       {{- $effectiveValues = mergeOverwrite $effectiveValues $exposureValues }}
     {{- end }}
 
