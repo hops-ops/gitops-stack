@@ -375,8 +375,8 @@ spec:
             x-kubernetes-validations:
             - rule: "!has(self.auth) || !has(self.auth.oidc) || !self.auth.oidc.enabled || (has(self.exposure) && self.exposure.enabled)"
               message: spec.exposure.enabled must be true when native OIDC is enabled
-            - rule: "!has(self.repository) || !has(self.repository.webhook) || !self.repository.webhook.enabled || (has(self.exposure) && self.exposure.enabled)"
-              message: spec.exposure.enabled must be true when the GitHub webhook is enabled
+            - rule: "!has(self.repository) || !has(self.repository.webhook) || !self.repository.webhook.enabled || has(self.repository.webhook.url) || (has(self.exposure) && self.exposure.enabled)"
+              message: spec.exposure.enabled must be true when the GitHub webhook is enabled unless spec.repository.webhook.url is provided
           status:
             description: GitopsStackStatus defines the observed state.
             type: object
